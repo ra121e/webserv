@@ -6,7 +6,7 @@
 /*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/09 15:56:43 by athonda          ###   ########.fr       */
+/*   Updated: 2025/06/09 16:14:06 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 #include <iostream>
 #include <sys/socket.h> // socket
 #include <sys/types.h> // accept()
-#include <netinet/in.h> // AF_INET, sockaddr_in type struct
+#include <netinet/in.h> // AF_INET, sockaddr_in type struct, INADDR_ANY
 #include <errno.h> // perror
 #include <stdio.h> // perror
 #include <unistd.h> // close(sock)
@@ -35,7 +35,7 @@ int	main(void)
 	struct sockaddr_in	client_addr;
 	socklen_t	addrlen = sizeof(client_addr);
 	char	buf[1024];
-	
+
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 		perror("socket");
@@ -61,7 +61,7 @@ int	main(void)
 	close(client_fd);
 	close(server_fd);
 
-//	printBanner("test: write() send message to socket");	
+//	printBanner("test: write() send message to socket");
 //	write(3, "a", 1);
 //	close(sock);
 	return (0);
