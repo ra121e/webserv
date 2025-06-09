@@ -6,13 +6,13 @@
 #    By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/06/09 13:03:23 by athonda          ###   ########.fr        #
+#    Updated: 2025/06/09 15:25:01 by athonda          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	=	Webserv
 
-SRC_F	=	main.cpp \
+SRC_F	=	server.cpp \
 
 SRC_DIR	=	.
 SRC		=	$(patsubst %.cpp,$(SRC_DIR)/%.cpp,$(SRC_F))
