@@ -3,13 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.      +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 15:29:12 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/09 17:47:34 by athonda          ###   ########.fr       */
+/*   Updated: 2025/06/10 11:32:06 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <vector>
+#include <string>
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -32,8 +35,15 @@ int main()
 
 	connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
-	write(sockfd, "Hello, server!", 15);
+	std::cout << "type message here. if you want to finish, type EOM." << std::endl;
+	std::string	input;
+	while (std::getline(std::cin, input))
+	{
+		std::vector<char> str(input.begin(), input.end());
+		write(sockfd, &str[0], str.size());
+		if (input == "EOM")
+			break ;
+	}
 	close(sockfd);
-
 	return 0;
 }

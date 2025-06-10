@@ -6,7 +6,7 @@
 /*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/09 16:14:06 by athonda          ###   ########.fr       */
+/*   Updated: 2025/06/10 11:21:48 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,9 +54,16 @@ int	main(void)
 	client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addrlen);
 	printf("Connected from client\n");
 
-	int n = read(client_fd, buf, sizeof(buf) - 1);
-	buf[n] = '\0';
-	printf("message from client is %s\n", buf);
+	while (1)
+	{
+		int n = read(client_fd, buf, sizeof(buf) - 1);
+		if (n <= 0)
+			break ;
+		buf[n] = '\0';
+		printf("> %s\n", buf);
+		if (!strcmp(buf, "EOM"))
+			break ;
+	}
 
 	close(client_fd);
 	close(server_fd);
