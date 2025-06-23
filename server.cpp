@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/16 20:22:16 by athonda          ###   ########.fr       */
+/*   Updated: 2025/06/23 21:52:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ int	main(void)
 	serv_addr.sin_port = htons(12345);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-	bind(server_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+	bind(server_fd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr));
 	listen(server_fd, 5);
 
 	// set one each poll target
@@ -83,7 +83,7 @@ int	main(void)
 				{
 					struct sockaddr_in	client_addr;
 					socklen_t	addrlen = sizeof(client_addr);
-					client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addrlen);
+					client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addrlen);
 
 					std::cout << "new client connected: fd " << client_fd << std::endl;
 					struct pollfd	poll_target_client;
@@ -95,11 +95,11 @@ int	main(void)
 				else
 				{
 					// receive data from client
-					int n = read(fds[i].fd, buf, sizeof(buf) - 1);
+					ssize_t n = read(fds[i].fd, buf, sizeof(buf) - 1);
 					if (n <= 0)
 					{
 						close(fds[i].fd);
-						fds.erase(fds.begin() + i);
+						fds.erase(fds.begin() + static_cast<std::vector<pollfd>::difference_type>(i));
 						--i;
 						continue ;
 					}
@@ -108,7 +108,7 @@ int	main(void)
 					if (!strcmp(buf, "EOM"))
 					{
 						close(fds[i].fd);
-						fds.erase(fds.begin() + i);
+						fds.erase(fds.begin() + static_cast<std::vector<pollfd>::difference_type>(i));
 						--i;
 					}
 				}

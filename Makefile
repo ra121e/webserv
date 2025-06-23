@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+         #
+#    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/06/09 19:07:52 by athonda          ###   ########.fr        #
+#    Updated: 2025/06/23 21:55:30 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,21 +25,22 @@ OBJ_S	=	$(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRC_F_S))
 OBJ_C	=	$(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRC_F_C))
 
 INC_DIR	=	.
-DEP		=	$(wildcard $(patsubst %.cpp,$(INC_DIR)/%.hpp,$(SRC_F)))
+S_DEP	=	$(SRC_S:.cpp=.d)
+C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CFLAGS	=	-g -Wall -Werror -Wextra -std=c++98
-CC		=	c++
+CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wconversion -Wcast-qual -Wunreachable-code -Wstrict-overflow=5 -Waggregate-return -Wfloat-equal -Wold-style-cast -Wcast-align -Wshadow -pedantic
+CXX		=	c++
 
-$(NAME_S): $(OBJ_S) $(DEP)
-	$(CC) $(CFLAGS) $(OBJ_S) -o $@
+$(NAME_S): $(OBJ_S)
+	$(CXX) $(CXXFLAGS) $(OBJ_S) -o $@
 
-$(NAME_C): $(OBJ_C) $(DEP)
-	$(CC) $(CFLAGS) $(OBJ_C) -o $@
+$(NAME_C): $(OBJ_C)
+	$(CXX) $(CXXFLAGS) $(OBJ_C) -o $@
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEP)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) $(IFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(IFLAGS) -c $< -o $@
 
 .PHONY: all clean fclean re server client
 
@@ -61,3 +62,5 @@ norm:
 	clear
 	nm -u $(NAME_S) $(NAME_C)
 	grep -n -e "main" $(SRC) $(DEP)
+
+-include $(S_DEP) $(C_DEP)
