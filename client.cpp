@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 15:29:12 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/10 11:32:06 by athonda          ###   ########.fr       */
+/*   Updated: 2025/06/24 21:29:27 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,7 @@ int main()
 	serv_addr.sin_port = htons(12345);
 	inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
 
-	connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+	connect(sockfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr));
 
 	std::cout << "type message here. if you want to finish, type EOM." << std::endl;
 	std::string	input;

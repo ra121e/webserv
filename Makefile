@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/06/23 21:55:30 by cgoh             ###   ########.fr        #
+#    Updated: 2025/06/24 22:10:45 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,7 +29,7 @@ S_DEP	=	$(SRC_S:.cpp=.d)
 C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wconversion -Wcast-qual -Wunreachable-code -Wstrict-overflow=5 -Waggregate-return -Wfloat-equal -Wold-style-cast -Wcast-align -Wshadow -pedantic
+CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wconversion -Weffc++ -Wcast-qual -Wstrict-overflow=5 -Waggregate-return -Wfloat-equal -Wold-style-cast -Wcast-align -Wshadow -Wimplicit -Wincompatible-pointer-types -pedantic -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
 CXX		=	c++
 
 $(NAME_S): $(OBJ_S)
