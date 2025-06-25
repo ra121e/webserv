@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/23 21:52:52 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/06/25 18:36:58 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,10 +24,10 @@
 #include <arpa/inet.h>
 #include <string.h> // memset
 
-void	printBanner(std::string const &title)
-{
-	std::cout << "\n--- " << title << " ---" << std::endl;
-}
+// void	printBanner(std::string const &title)
+// {
+// 	std::cout << "\n--- " << title << " ---" << std::endl;
+// }
 
 int	main(void)
 {
