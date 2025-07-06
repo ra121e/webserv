@@ -6,14 +6,14 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/06/25 18:32:38 by cgoh             ###   ########.fr        #
+#    Updated: 2025/07/06 21:47:45 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME_S	=	Server
+NAME_S	=	webserv
 NAME_C	=	Client
 
-SRC_F_S	=	server.cpp
+SRC_F_S	=	main.cpp Server.cpp Location.cpp
 SRC_F_C	=	client.cpp
 
 SRC_DIR	=	.
@@ -29,14 +29,14 @@ S_DEP	=	$(SRC_S:.cpp=.d)
 C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
 CXX		=	c++
 
 $(NAME_S): $(OBJ_S)
-	$(CXX) $(CXXFLAGS) $(OBJ_S) -o $@
+	$(CXX) $(OBJ_S) -o $@
 
 $(NAME_C): $(OBJ_C)
-	$(CXX) $(CXXFLAGS) $(OBJ_C) -o $@
+	$(CXX) $(OBJ_C) -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(OBJ_DIR)

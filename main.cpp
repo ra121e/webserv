@@ -1,35 +1,46 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   server.cpp                                         :+:      :+:    :+:   */
+/*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/06/25 18:36:58 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/07/06 21:33:27 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <poll.h>
-#include <vector>
-#include <string>
-#include <iostream>
-#include <sys/socket.h> // socket
-#include <sys/types.h> // accept()
-#include <netinet/in.h> // AF_INET, sockaddr_in type struct, INADDR_ANY
-#include <errno.h> // perror
-#include <stdio.h> // perror
-#include <unistd.h> // close(sock)
-#include <stdlib.h> // memset
-#include <arpa/inet.h>
-#include <string.h> // memset
+#include "Server.hpp"
 
 // void	printBanner(std::string const &title)
 // {
 // 	std::cout << "\n--- " << title << " ---" << std::endl;
 // }
 
-int	main(void)
+static bool	read_file(const char *filename)
+{
+	std::ifstream	infile(filename);
+	
+	if (!infile)
+	{
+		std::cerr << "Error: Unable to open " << filename << "\n";
+		return false;
+	}
+	for (std::string line; std::getline(infile, line);)
+	{
+		std::istringstream	iss(line);
+		std::string			word;
+		
+		while (iss >> word)
+		{
+			std::cout << word;
+		}
+		std::cout << "\n";	
+	}
+	return true;
+}
+
+int	main(int argc, char **argv)
 {
 	int	server_fd;
 	int	client_fd;
@@ -38,6 +49,13 @@ int	main(void)
 //	socklen_t	addrlen = sizeof(client_addr);
 	char	buf[1024];
 
+	if (argc != 2)
+	{
+		std::cerr << "Usage: ./webserv [configuration file]\n";
+		return 1;
+	}
+	if (!read_file(argv[1]))
+		return 1;
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 		perror("socket");
