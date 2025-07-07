@@ -6,26 +6,45 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/07/06 21:33:27 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/07/07 20:44:04 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Server.hpp"
+#include "Config.hpp"
 
 // void	printBanner(std::string const &title)
 // {
 // 	std::cout << "\n--- " << title << " ---" << std::endl;
 // }
 
-static bool	read_file(const char *filename)
+static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config& conf)
+{
+	Server		serv;
+	std::string	word;
+
+	iss >> word;
+	if (!iss || word != "{")
+		throw std::runtime_error("Error: expected '{'");
+	iss >> word;
+	if (iss)
+		throw std::runtime_error("Error: unexpected token '" + word + "'");
+	for (std::string line; std::getline(infile, line);)
+	{
+		std::istringstream	ss(line);
+
+		while (ss >> word)
+		{
+			
+		}
+	}
+}
+
+static void	get_file_config(const char *filename, Config& conf)
 {
 	std::ifstream	infile(filename);
 	
 	if (!infile)
-	{
-		std::cerr << "Error: Unable to open " << filename << "\n";
-		return false;
-	}
+		throw std::ios_base::failure("Error: unable to open " + std::string(filename));
 	for (std::string line; std::getline(infile, line);)
 	{
 		std::istringstream	iss(line);
@@ -33,11 +52,12 @@ static bool	read_file(const char *filename)
 		
 		while (iss >> word)
 		{
-			std::cout << word;
+			if (word == "server")
+				parse_server(infile, iss, conf);
+			else
+				throw std::runtime_error("Error: token '" + word + "' is not recognized");
 		}
-		std::cout << "\n";	
 	}
-	return true;
 }
 
 int	main(int argc, char **argv)
@@ -48,14 +68,22 @@ int	main(int argc, char **argv)
 //	struct sockaddr_in	client_addr;
 //	socklen_t	addrlen = sizeof(client_addr);
 	char	buf[1024];
+	Config	conf;
 
 	if (argc != 2)
 	{
 		std::cerr << "Usage: ./webserv [configuration file]\n";
 		return 1;
 	}
-	if (!read_file(argv[1]))
+	try
+	{
+		get_file_config(argv[1], conf);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
 		return 1;
+	}
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
 		perror("socket");

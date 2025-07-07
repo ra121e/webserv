@@ -13,6 +13,10 @@ private:
 public:
 	Location();
 	~Location();
+	void	addMethod(const std::string& method);
+	void	setAlias(const std::string& _alias);
+	void	enableAutoIndex();
+	void	setIndex(const std::string& index);
 };
 
 #endif

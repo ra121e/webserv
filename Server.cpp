@@ -8,14 +8,9 @@ Server::~Server()
 {
 }
 
-void	Server::setHost(const std::string& _host)
+void	Server::addNetwork(const Network& net)
 {
-	host = _host;
-}
-
-void	Server::setPort(uint16_t _port)
-{
-	port = _port;
+	networks.push_back(net);
 }
 
 void	Server::setClientMaxBodySize(uint64_t _clientMaxBodySize)

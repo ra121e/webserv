@@ -6,14 +6,14 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/07/06 21:47:45 by cgoh             ###   ########.fr        #
+#    Updated: 2025/07/07 19:17:42 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME_S	=	webserv
 NAME_C	=	Client
 
-SRC_F_S	=	main.cpp Server.cpp Location.cpp
+SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp
 SRC_F_C	=	client.cpp
 
 SRC_DIR	=	.
