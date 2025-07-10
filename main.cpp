@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/07/07 20:44:04 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/07/10 22:35:00 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,73 @@
 // {
 // 	std::cout << "\n--- " << title << " ---" << std::endl;
 // }
+
+static void	parse_single_error_page(Server& serv, const std::string& line)
+{
+	std::istringstream	iss(line);
+	std::string			error;
+	std::string			page;
+
+	if (!(iss >> error && iss >> page))
+		throw std::ios_base::failure("Error: expected [error_code] [error_page]");
+	serv.addErrorPage(error, page);
+}
+
+static void	parse_error_pages(std::ifstream& infile, std::istringstream &ss, Server& serv)
+{
+	std::string	word;
+	std::string	line;
+
+	if (ss >> word)
+	{
+		if (word != "{")
+			throw std::runtime_error("Error: expected '{'");
+		if (ss >> word)
+			throw std::runtime_error("Error: unexpected token '" + word + "'");
+		while (std::getline(infile, line))
+			parse_single_error_page(serv, line);
+	}
+	else
+		throw std::ios_base::failure("Error: expected '{'");
+}
+
+static void	parse_client_max_body_size(std::istringstream &ss, Server& serv)
+{
+	std::string	word;
+
+	if (ss >> word)
+	{
+		std::istringstream	iss(word);
+		uint64_t			size = 0;
+		if (!(iss >> size))
+			throw std::ios_base::failure("Error: client_max_body_size must be a 64-bit integer");
+		serv.setClientMaxBodySize(size);
+	}
+	else
+		throw std::ios_base::failure("Error: Missing client_max_body_size number");
+}
+
+static void	parse_listen(std::istringstream &ss, Server& serv)
+{
+	std::string	word;
+	std::size_t	colonPos;
+	
+	if (ss >> word)
+	{
+		colonPos = word.find(':');
+		if (colonPos == std::string::npos)
+			throw std::runtime_error("Error: interface:port expected");
+		std::string	host = word.substr(0, colonPos);
+		std::string	portStr = word.substr(colonPos + 1);
+		std::istringstream	iss(portStr);
+		uint16_t			port = 0;
+		if (!(iss >> port))
+			throw std::ios_base::failure("Error: Port number must be within 0-65535");
+		serv.addNetwork(Network(host, port));
+	}
+	else
+		throw std::ios_base::failure("Error: interface:port expected");
+}
 
 static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config& conf)
 {
@@ -32,11 +99,23 @@ static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config&
 	{
 		std::istringstream	ss(line);
 
-		while (ss >> word)
+		if (ss >> word)
 		{
-			
+			if (word == "listen")
+				parse_listen(ss, serv);
+			else if (word == "client_max_body_size")
+				parse_client_max_body_size(ss, serv);
+			else if (word == "error_page")
+				parse_error_pages(infile, ss, serv);
+			else if (word == "location")
+			{
+				
+			}
+			else
+				throw std::runtime_error("Error: unexpected token '" + word + "'");
 		}
 	}
+	conf.addServer(serv);
 }
 
 static void	get_file_config(const char *filename, Config& conf)

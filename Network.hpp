@@ -1,13 +1,13 @@
 #ifndef NETWORK_HPP
 #define NETWORK_HPP
 #include <iostream>
+#include <stdint.h>
 
-class Network
+struct Network
 {
-private:
 	std::string	host;
 	uint16_t	port;
-public:
+	
 	Network();
 	Network(const std::string& _host, uint16_t _port);
 	~Network();
