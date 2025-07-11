@@ -3,19 +3,14 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/07/10 22:35:00 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/07/11 10:02:57 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Config.hpp"
-
-// void	printBanner(std::string const &title)
-// {
-// 	std::cout << "\n--- " << title << " ---" << std::endl;
-// }
 
 static void	parse_single_error_page(Server& serv, const std::string& line)
 {
@@ -66,7 +61,7 @@ static void	parse_listen(std::istringstream &ss, Server& serv)
 {
 	std::string	word;
 	std::size_t	colonPos;
-	
+
 	if (ss >> word)
 	{
 		colonPos = word.find(':');
@@ -109,7 +104,7 @@ static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config&
 				parse_error_pages(infile, ss, serv);
 			else if (word == "location")
 			{
-				
+
 			}
 			else
 				throw std::runtime_error("Error: unexpected token '" + word + "'");
@@ -121,14 +116,14 @@ static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config&
 static void	get_file_config(const char *filename, Config& conf)
 {
 	std::ifstream	infile(filename);
-	
+
 	if (!infile)
 		throw std::ios_base::failure("Error: unable to open " + std::string(filename));
 	for (std::string line; std::getline(infile, line);)
 	{
 		std::istringstream	iss(line);
 		std::string			word;
-		
+
 		while (iss >> word)
 		{
 			if (word == "server")
@@ -144,111 +139,200 @@ int	main(int argc, char **argv)
 	int	server_fd;
 	int	client_fd;
 	struct sockaddr_in	serv_addr;
-//	struct sockaddr_in	client_addr;
-//	socklen_t	addrlen = sizeof(client_addr);
 	char	buf[1024];
 	Config	conf;
 
-	if (argc != 2)
-	{
-		std::cerr << "Usage: ./webserv [configuration file]\n";
-		return 1;
-	}
-	try
-	{
-		get_file_config(argv[1], conf);
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << e.what() << "\n";
-		return 1;
-	}
+//	if (argc != 2)
+//	{
+//		std::cerr << "Usage: ./webserv [configuration file]\n";
+//		return 1;
+//	}
+//	try
+//	{
+//		get_file_config(argv[1], conf);
+//	}
+//	catch (const std::exception& e)
+//	{
+//		std::cerr << e.what() << "\n";
+//		return 1;
+//	}
+
+	// preparation of server socket
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0)
+	{
 		perror("socket");
+		return (1);
+	}
 	std::cout << "socket return value is " << server_fd << std::endl;
 
+	// change server socket to non-blocking mode
+	if (fcntl(server_fd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		perror("fcntl NONBLOCK");
+		close(server_fd);
+		return (1);
+	}
+
+	// setting server sockaddr_in struct
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_port = htons(12345);
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 
-	bind(server_fd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr));
-	listen(server_fd, 5);
+	// bind the socket to port number
+	if (bind(server_fd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr)) < 0)
+	{
+		perror("bind");
+		close (server_fd);
+		return (1);
+	}
 
-	// set one each poll target
-	struct pollfd	poll_target_server;
-	poll_target_server.fd = server_fd;
-	poll_target_server.events = POLLIN;
-
-	// set series of poll target in vector
-	std::vector<struct pollfd> fds;
-	fds.push_back(poll_target_server);
+	if (listen(server_fd, 5) < 0)
+	{
+		perror("listen");
+		close (server_fd);
+		return (1);
+	}
 
 	printf("Waiting for connection...\n");
 
+	// epoll instance
+	int	epoll_fd = epoll_create1(0);
+	if (epoll_fd == -1)
+	{
+		perror("epoll_create1");
+		close(server_fd);
+		return (1);
+	}
 
+	// set server fd and event into event struct (its like "entry sheet" or "application form")
+	struct epoll_event	event;
+	event.events = EPOLLIN | EPOLLET;
+	event.data.fd = server_fd;
 
-//	client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &addrlen);
-//	printf("Connected from client\n");
+	// rigistration event into epoll
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &event) == -1)
+	{
+		perror("epoll_ctl");
+		close(server_fd);
+		close(epoll_fd);
+		return (1);
+	}
 
-	bool had_client = false;
+	int	MAX_EVENTS = 64;
+	struct epoll_event	events[MAX_EVENTS];
+
 	while (1)
 	{
-		int ret = poll(fds.data(), fds.size(), -1);
-		if (ret < 0)
-			break ;
-		for (size_t i = 0; i < fds.size(); ++i)
+		// ask kernel of event happening
+		int	num_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+		if (num_events == -1)
 		{
-			// check return envent counter and POLLIN counter "0x0001"
-			if (fds[i].revents & POLLIN)
-			{
-				// new connection from new client
-				if (fds[i].fd == server_fd)
-				{
-					struct sockaddr_in	client_addr;
-					socklen_t	addrlen = sizeof(client_addr);
-					client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addrlen);
+			perror("epoll_wait");
+			break ;
+		}
 
-					std::cout << "new client connected: fd " << client_fd << std::endl;
-					struct pollfd	poll_target_client;
-					poll_target_client.fd = client_fd;
-					poll_target_client.events = POLLIN;
-					fds.push_back(poll_target_client);
-					had_client = true;
-				}
-				else
+		// event check
+		for (size_t i = 0; i < num_events; ++i)
+		{
+			int current_fd = events[i].data.fd;
+
+			// new client access event
+			if (current_fd == server_fd)
+			{
+				struct sockaddr_in	client_addr;
+				socklen_t	addrlen = sizeof(client_addr);
+
+				// generate new fd for all of queing new clients
+				while (1)
 				{
-					// receive data from client
-					ssize_t n = read(fds[i].fd, buf, sizeof(buf) - 1);
-					if (n <= 0)
+					client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addrlen);
+					if (client_fd == -1)
 					{
-						close(fds[i].fd);
-						fds.erase(fds.begin() + static_cast<std::vector<pollfd>::difference_type>(i));
-						--i;
+						if (errno == EAGAIN || errno == EWOULDBLOCK)
+							break ;
+						else
+						{
+							perror("accept");
+							break ;
+						}
+					}
+					std::cout << "new client connected: fd " << client_fd << std::endl;
+
+					// setting the new client socket as previous
+					// change client socket to non-blocking mode
+					if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
+					{
+						perror("fcntl NONBLOCK");
+						close(client_fd);
 						continue ;
 					}
-					buf[n] = '\0';
-					std::cout << "FD " << fds[i].fd << ">" << buf << std::endl;
-					if (!strcmp(buf, "EOM"))
+
+					// set client fd and event to "application form"
+					struct epoll_event	event;
+					event.events = EPOLLIN | EPOLLET;
+					event.data.fd = client_fd;
+
+					// registration the client socket into epoll
+					if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_fd, &event) == -1)
 					{
-						close(fds[i].fd);
-						fds.erase(fds.begin() + static_cast<std::vector<pollfd>::difference_type>(i));
-						--i;
+						perror("epoll_ctl");
+						close(client_fd);
+						continue ;
+					}
+				}
+			}
+			// present client request event
+			else
+			{
+				// check if the event is "must read"
+				if (events[i].events & POLLIN)
+				{
+					// read fd untill end
+					bool	connection_closed = false;
+					while (1)
+					{
+						// receive data from client fd
+						ssize_t n = read(current_fd, buf, sizeof(buf) - 1);
+						if (n == -1)
+						{
+							// nothing to read now, keep connection, I will be back...
+							if (errno == EAGAIN || errno == EWOULDBLOCK)
+								break ;
+							// something error happens
+							else
+							{
+								perror("read");
+								connection_closed = true;
+								break ;
+							}
+						}
+						// read complete
+						else if (n == 0)
+						{
+							connection_closed = true;
+							break ;
+						}
+						buf[n] = '\0';
+						std::cout << "FD " << current_fd << ">" << buf << std::endl;
+						if (!strcmp(buf, "EOM"))
+						{
+							connection_closed = true;
+							break ;
+						}
+					}
+					// close fd and withdraw fd from epoll list after disconnection
+					if (connection_closed)
+					{
+						std::cout << "Client disconnected: FD " << current_fd << std::endl;
+						if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, current_fd, NULL) == -1)
+							perror("epoll_ctl");
+						close (current_fd);
 					}
 				}
 			}
 		}
-		if (had_client && fds.size() == 1)
-			break ;
 	}
-	for (size_t i = 0; i < fds.size(); ++i)
-		close (fds[i].fd);
-//	close(client_fd);
-//	close(server_fd);
-
-//	printBanner("test: write() send message to socket");
-//	write(3, "a", 1);
-//	close(sock);
 	return (0);
 }

@@ -13,6 +13,8 @@
 #include <stdlib.h> // memset
 #include <arpa/inet.h>
 #include <string.h> // memset
+#include <sys/epoll.h> // epoll
+#include <fcntl.h> //fcntl, O_NONBLOCK
 #include <fstream>
 #include <sstream>
 #include "Location.hpp"

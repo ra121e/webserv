@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
+#    By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/07/10 23:07:46 by cgoh             ###   ########.fr        #
+#    Updated: 2025/07/11 08:13:32 by athonda          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,7 +29,7 @@ S_DEP	=	$(SRC_S:.cpp=.d)
 C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+#CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
 CXX		=	c++
 
 $(NAME_S): $(OBJ_S)
