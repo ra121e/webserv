@@ -3,136 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/07/11 10:02:57 by athonda          ###   ########.fr       */
+/*   Updated: 2025/07/13 22:18:47 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "Config.hpp"
-
-static void	parse_single_error_page(Server& serv, const std::string& line)
-{
-	std::istringstream	iss(line);
-	std::string			error;
-	std::string			page;
-
-	if (!(iss >> error && iss >> page))
-		throw std::ios_base::failure("Error: expected [error_code] [error_page]");
-	serv.addErrorPage(error, page);
-}
-
-static void	parse_error_pages(std::ifstream& infile, std::istringstream &ss, Server& serv)
-{
-	std::string	word;
-	std::string	line;
-
-	if (ss >> word)
-	{
-		if (word != "{")
-			throw std::runtime_error("Error: expected '{'");
-		if (ss >> word)
-			throw std::runtime_error("Error: unexpected token '" + word + "'");
-		while (std::getline(infile, line))
-			parse_single_error_page(serv, line);
-	}
-	else
-		throw std::ios_base::failure("Error: expected '{'");
-}
-
-static void	parse_client_max_body_size(std::istringstream &ss, Server& serv)
-{
-	std::string	word;
-
-	if (ss >> word)
-	{
-		std::istringstream	iss(word);
-		uint64_t			size = 0;
-		if (!(iss >> size))
-			throw std::ios_base::failure("Error: client_max_body_size must be a 64-bit integer");
-		serv.setClientMaxBodySize(size);
-	}
-	else
-		throw std::ios_base::failure("Error: Missing client_max_body_size number");
-}
-
-static void	parse_listen(std::istringstream &ss, Server& serv)
-{
-	std::string	word;
-	std::size_t	colonPos;
-
-	if (ss >> word)
-	{
-		colonPos = word.find(':');
-		if (colonPos == std::string::npos)
-			throw std::runtime_error("Error: interface:port expected");
-		std::string	host = word.substr(0, colonPos);
-		std::string	portStr = word.substr(colonPos + 1);
-		std::istringstream	iss(portStr);
-		uint16_t			port = 0;
-		if (!(iss >> port))
-			throw std::ios_base::failure("Error: Port number must be within 0-65535");
-		serv.addNetwork(Network(host, port));
-	}
-	else
-		throw std::ios_base::failure("Error: interface:port expected");
-}
-
-static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config& conf)
-{
-	Server		serv;
-	std::string	word;
-
-	iss >> word;
-	if (!iss || word != "{")
-		throw std::runtime_error("Error: expected '{'");
-	iss >> word;
-	if (iss)
-		throw std::runtime_error("Error: unexpected token '" + word + "'");
-	for (std::string line; std::getline(infile, line);)
-	{
-		std::istringstream	ss(line);
-
-		if (ss >> word)
-		{
-			if (word == "listen")
-				parse_listen(ss, serv);
-			else if (word == "client_max_body_size")
-				parse_client_max_body_size(ss, serv);
-			else if (word == "error_page")
-				parse_error_pages(infile, ss, serv);
-			else if (word == "location")
-			{
-
-			}
-			else
-				throw std::runtime_error("Error: unexpected token '" + word + "'");
-		}
-	}
-	conf.addServer(serv);
-}
-
-static void	get_file_config(const char *filename, Config& conf)
-{
-	std::ifstream	infile(filename);
-
-	if (!infile)
-		throw std::ios_base::failure("Error: unable to open " + std::string(filename));
-	for (std::string line; std::getline(infile, line);)
-	{
-		std::istringstream	iss(line);
-		std::string			word;
-
-		while (iss >> word)
-		{
-			if (word == "server")
-				parse_server(infile, iss, conf);
-			else
-				throw std::runtime_error("Error: token '" + word + "' is not recognized");
-		}
-	}
-}
+#include "main.hpp"
+#include <string.h>
 
 int	main(int argc, char **argv)
 {
@@ -142,20 +21,20 @@ int	main(int argc, char **argv)
 	char	buf[1024];
 	Config	conf;
 
-//	if (argc != 2)
-//	{
-//		std::cerr << "Usage: ./webserv [configuration file]\n";
-//		return 1;
-//	}
-//	try
-//	{
-//		get_file_config(argv[1], conf);
-//	}
-//	catch (const std::exception& e)
-//	{
-//		std::cerr << e.what() << "\n";
-//		return 1;
-//	}
+	if (argc != 2)
+	{
+		std::cerr << "Usage: ./webserv [configuration file]\n";
+		return 1;
+	}
+	try
+	{
+		get_file_config(argv[1], conf);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << "\n";
+		return 1;
+	}
 
 	// preparation of server socket
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -219,8 +98,8 @@ int	main(int argc, char **argv)
 		close(epoll_fd);
 		return (1);
 	}
-
-	int	MAX_EVENTS = 64;
+	
+	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
 
 	while (1)

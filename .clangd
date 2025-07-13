@@ -1,0 +1,22 @@
+# .clangd – top-level clangd configuration for your project
+
+# 1. Compilation database location & extra compiler flags
+CompileFlags:
+  # any extra flags you want clangd to always use:
+  Add: 
+    - "-Wall"
+    - "-Wextra"
+    - "-Werror"
+    - "-Weverything"
+    - "-std=c++98"
+    # include directories if not already in compile_commands.json:
+    - "-I${workspaceRoot}"
+  Remove:
+    - "-Wpadded"
+
+# 2. Diagnostics behavior
+Diagnostics:
+  # treat warnings as you’d like (clangd itself still reports them):
+  Suppress: []            # list of warning names to ignore
+  ClangTidy:
+    Add: [bugprone*, cppcoreguidelines*, clang-analyzer*]
