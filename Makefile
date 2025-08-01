@@ -13,7 +13,7 @@
 NAME_S	=	webserv
 NAME_C	=	Client
 
-SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp
+SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp cgi_handler.cpp cgi_utils.cpp my_cgi.cpp
 SRC_F_C	=	client.cpp
 
 SRC_DIR	=	.
