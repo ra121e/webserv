@@ -1,16 +1,27 @@
 #ifndef NETWORK_HPP
 #define NETWORK_HPP
-#include <iostream>
 #include <stdint.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <errno.h>
 
-struct Network
+class Network
 {
-	std::string	host;
-	uint16_t	port;
+private:
+	const char	*host;
+	const char	*port;
+	int			socket_fd;
 	
+public:
 	Network();
-	Network(const std::string& _host, uint16_t _port);
+	Network(const char *_host, const char *_port);
 	~Network();
+	int		getFd() const;
+	void	setupListener();
 };
 
 #endif

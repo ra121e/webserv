@@ -1,4 +1,5 @@
 #include "main.hpp"
+#include <string>
 
 static void	parse_route_methods(std::istringstream& iss, Location& route)
 {
@@ -133,14 +134,12 @@ static void	parse_listen(std::istringstream &ss, Server& serv)
 	{
 		size_t	colonPos = word.find(':');
 		if (colonPos == std::string::npos)
+		{
 			throw std::runtime_error("Error: interface:port expected");
-		std::string	host = word.substr(0, colonPos);
+		}
+		std::string	hostStr = word.substr(0, colonPos);
 		std::string	portStr = word.substr(colonPos + 1);
-		std::istringstream	iss(portStr);
-		uint16_t			port = 0;
-		if (!(iss >> port))
-			throw std::ios_base::failure("Error: Port number must be within 0-65535");
-		serv.addNetwork(Network(host, port));
+		serv.addNetwork(Network(hostStr.c_str(), portStr.c_str()));
 	}
 	else
 		throw std::ios_base::failure("Error: interface:port expected");

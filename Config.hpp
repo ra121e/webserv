@@ -11,6 +11,8 @@ public:
 	Config();
 	~Config();
 	void	addServer(const Server& server);
+	void	setupServers();
+	const std::vector<Server>&	getServers() const;
 };
 
 #endif
