@@ -6,14 +6,14 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/07/13 22:18:00 by cgoh             ###   ########.fr        #
+#    Updated: 2025/08/06 18:03:50 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME_S	=	webserv
 NAME_C	=	Client
 
-SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp cgi_handler.cpp cgi_utils.cpp my_cgi.cpp
+SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp cgi_handler.cpp cgi_utils.cpp Epoll.cpp Client.cpp
 SRC_F_C	=	client.cpp
 
 SRC_DIR	=	.

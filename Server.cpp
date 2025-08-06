@@ -1,18 +1,48 @@
 #include "Server.hpp"
+#include <cerrno>
+#include <cstring>
 #include <netdb.h>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <vector>
+#include <fcntl.h>
 
 Server::Server()
 {
 }
 
-Server::~Server()
+Server::Server(const Server& other): client_max_body_size(other.client_max_body_size), error_pages(other.error_pages), locations(other.locations)
 {
+	for (std::vector<Network*>::const_iterator it = other.networks.begin(); it != other.networks.end(); ++it)
+	{
+		networks.push_back(new Network(**it));
+	}
 }
 
-void	Server::addNetwork(const Network& net)
+Server&	Server::operator=(const Server& other)
+{
+	if (this != &other)
+	{
+		for (std::vector<Network*>::const_iterator it = other.networks.begin(); it != other.networks.end(); ++it)
+		{
+			networks.push_back(new Network(**it));
+		}
+		client_max_body_size = other.client_max_body_size;
+		error_pages = other.error_pages;
+		locations = other.locations;
+	}
+	return *this;
+}
+
+Server::~Server()
+{
+	for (std::vector<Network*>::iterator it = networks.begin(); it != networks.end(); ++it)
+	{
+		delete *it;
+	}
+}
+
+void	Server::addNetwork(Network* net)
 {
 	networks.push_back(net);
 }
@@ -34,28 +64,13 @@ void	Server::addLocation(const std::string& path, const Location& location)
 
 void	Server::setup()
 {
-	for (std::vector<Network>::iterator it = networks.begin(); it != networks.end(); ++it)
+	for (std::vector<Network*>::iterator it = networks.begin(); it != networks.end(); ++it)
 	{
-		it->setupListener();
+		(*it)->setupListener();
 	}
-	// preparation of server socket
-	int	server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_fd < 0)
-	{
-		throw std::runtime_error("Failed to create socket");
-	}
-	// std::cout << "socket return value is " << server_fd << std::endl;
-
-	// change server socket to non-blocking mode
-	// if (fcntl(server_fd, F_SETFL, O_NONBLOCK) == -1)
-	// {
-	// 	perror("fcntl NONBLOCK");
-	// 	close(server_fd);
-	// 	return (1);
-	// }
 }
 
-const std::vector<Network>&	Server::getNetworks() const
+const std::vector<Network*>&	Server::getNetworks() const
 {
 	return networks;
 }

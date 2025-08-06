@@ -1,6 +1,7 @@
 #ifndef NETWORK_HPP
 #define NETWORK_HPP
 #include <stdint.h>
+#include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -12,13 +13,15 @@
 class Network
 {
 private:
-	const char	*host;
-	const char	*port;
+	std::string	host;
+	std::string	port;
 	int			socket_fd;
 	
 public:
 	Network();
-	Network(const char *_host, const char *_port);
+	Network(const std::string& _host, const std::string& _port);
+	Network(const Network& other);
+	Network&	operator=(const Network& other);
 	~Network();
 	int		getFd() const;
 	void	setupListener();

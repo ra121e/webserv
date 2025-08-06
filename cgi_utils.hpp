@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   cgi_utils.hpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: apoh <marvin@42.fr>                        +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/29 10:45:08 by apoh              #+#    #+#             */
-/*   Updated: 2025/07/29 10:45:09 by apoh             ###   ########.fr       */
+/*   Updated: 2025/08/06 18:06:18 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,5 +50,13 @@ void	send_error_response(int status_code, const std::string &status_text,
 
 void	send_successful_response(const std::string &file_path, const std::string &content_type);
 	// Writing successful response //
+bool	is_cgi_script(const std::string &path);
+int		create_pipe(int fds[2]);
+size_t	ft_strlen(const char *s);
+char	*ft_strdup(const char *s);
+size_t	ft_strlcpy(char *dest, const char *src, size_t size);
+char	**map_to_envp(const std::map<std::string, std::string> &env_map);
+void	free_envp(char **envp);
+ssize_t	write_all(int fd, const char *buf, size_t size);
 
 #endif

@@ -6,13 +6,15 @@
 class Config
 {
 private:
-	std::vector<Server>	servers;
+	std::vector<Server*>	servers;
+	Config(const Config& other);
+	Config&	operator=(const Config& other);
 public:
 	Config();
 	~Config();
-	void	addServer(const Server& server);
+	void	addServer(Server* server);
 	void	setupServers();
-	const std::vector<Server>&	getServers() const;
+	const std::vector<Server*>&	getServers() const;
 };
 
 #endif

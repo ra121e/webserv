@@ -139,7 +139,7 @@ static void	parse_listen(std::istringstream &ss, Server& serv)
 		}
 		std::string	hostStr = word.substr(0, colonPos);
 		std::string	portStr = word.substr(colonPos + 1);
-		serv.addNetwork(Network(hostStr.c_str(), portStr.c_str()));
+		serv.addNetwork(new Network(hostStr, portStr));
 	}
 	else
 		throw std::ios_base::failure("Error: interface:port expected");
@@ -147,7 +147,7 @@ static void	parse_listen(std::istringstream &ss, Server& serv)
 
 static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config& conf)
 {
-	Server		serv;
+	Server*		serv(new Server());
 	std::string	word;
 
 	iss >> word;
@@ -163,13 +163,13 @@ static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config&
 		if (ss >> word)
 		{
 			if (word == "listen")
-				parse_listen(ss, serv);
+				parse_listen(ss, *serv);
 			else if (word == "client_max_body_size")
-				parse_client_max_body_size(ss, serv);
+				parse_client_max_body_size(ss, *serv);
 			else if (word == "error_page")
-				parse_error_pages(infile, ss, serv);
+				parse_error_pages(infile, ss, *serv);
 			else if (word == "location")
-				parse_route(infile, ss, serv);
+				parse_route(infile, ss, *serv);
 			else if (word == "}")
 				break;
 			else
