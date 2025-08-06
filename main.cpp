@@ -3,15 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/07/13 22:18:47 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/06 13:46:12 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "main.hpp"
 #include <string.h>
+#include "ClientConnection.hpp"
 
 int	main(int argc, char **argv)
 {
@@ -98,9 +99,11 @@ int	main(int argc, char **argv)
 		close(epoll_fd);
 		return (1);
 	}
-	
+
 	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
+
+	std::map<int, ClientConnection*>	client_connections;
 
 	while (1)
 	{
@@ -113,7 +116,7 @@ int	main(int argc, char **argv)
 		}
 
 		// event check
-		for (size_t i = 0; i < num_events; ++i)
+		for (int i = 0; i < num_events; ++i)
 		{
 			int current_fd = events[i].data.fd;
 
@@ -138,6 +141,10 @@ int	main(int argc, char **argv)
 						}
 					}
 					std::cout << "new client connected: fd " << client_fd << std::endl;
+
+					// make and add client connection info into map container with fd as key
+					ClientConnection *cc = new ClientConnection(client_fd);
+					client_connections[client_fd] = cc;
 
 					// setting the new client socket as previous
 					// change client socket to non-blocking mode
@@ -168,47 +175,68 @@ int	main(int argc, char **argv)
 				// check if the event is "must read"
 				if (events[i].events & POLLIN)
 				{
-					// read fd untill end
-					bool	connection_closed = false;
-					while (1)
+					// search connection object by current_fd
+					std::map<int, ClientConnection *>::iterator it = client_connections.find(current_fd);
+					if (it != client_connections.end())
 					{
-						// receive data from client fd
-						ssize_t n = read(current_fd, buf, sizeof(buf) - 1);
-						if (n == -1)
+						ClientConnection	*ccon = it->second;
+
+						// read fd untill end
+						bool	connection_closed = false;
+						while (1)
 						{
-							// nothing to read now, keep connection, I will be back...
-							if (errno == EAGAIN || errno == EWOULDBLOCK)
-								break ;
-							// something error happens
-							else
+							// receive data from client fd
+							ssize_t n = read(current_fd, buf, sizeof(buf) - 1);
+							if (n == -1)
 							{
-								perror("read");
+								// nothing to read now, keep connection, I will be back...
+								if (errno == EAGAIN || errno == EWOULDBLOCK)
+									break ;
+								// something error happens
+								else
+								{
+									perror("read");
+									connection_closed = true;
+									break ;
+								}
+							}
+							// read complete
+							else if (n == 0)
+							{
+								connection_closed = true;
+								break ;
+							}
+							ccon->append_to_buffer(buf, n);
+							std::cout << "buffer: " << ccon->getBuffer() << std::endl;
+
+							if (ccon->parse_request())
+							{
+								std::cout << ccon->getRequest().method << std::endl;
+								std::cout << ccon->getRequest().uri << std::endl;
+								std::cout << ccon->getRequest().version << std::endl;
+								std::map<std::string, std::string>::const_iterator it_tmp = ccon->getRequest().headers.begin();
+								for (; it_tmp != ccon->getRequest().headers.end(); ++it_tmp)
+									std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
+							}
+//							buf[n] = '\0';
+//							std::cout << "FD " << current_fd << ">" << buf << std::endl;
+							if (!strcmp(buf, "EOM"))
+							{
 								connection_closed = true;
 								break ;
 							}
 						}
-						// read complete
-						else if (n == 0)
+						// close fd and withdraw fd from epoll list after disconnection
+						if (connection_closed)
 						{
-							connection_closed = true;
-							break ;
-						}
-						buf[n] = '\0';
-						std::cout << "FD " << current_fd << ">" << buf << std::endl;
-						if (!strcmp(buf, "EOM"))
-						{
-							connection_closed = true;
-							break ;
+							std::cout << "Client disconnected: FD " << current_fd << std::endl;
+							if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, current_fd, NULL) == -1)
+								perror("epoll_ctl");
+							close (current_fd);
 						}
 					}
-					// close fd and withdraw fd from epoll list after disconnection
-					if (connection_closed)
-					{
-						std::cout << "Client disconnected: FD " << current_fd << std::endl;
-						if (epoll_ctl(epoll_fd, EPOLL_CTL_DEL, current_fd, NULL) == -1)
-							perror("epoll_ctl");
-						close (current_fd);
-					}
+
+
 				}
 			}
 		}

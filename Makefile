@@ -3,17 +3,19 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
+#    By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/07/13 22:18:00 by cgoh             ###   ########.fr        #
+#    Updated: 2025/08/06 11:33:07 by athonda          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME_S	=	webserv
 NAME_C	=	Client
 
-SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp cgi_handler.cpp cgi_utils.cpp my_cgi.cpp
+SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp\
+			ClientConnection.cpp HttpRequest.cpp
+#			cgi_handler.cpp cgi_utils.cpp my_cgi.cpp
 SRC_F_C	=	client.cpp
 
 SRC_DIR	=	.
@@ -29,7 +31,8 @@ S_DEP	=	$(SRC_S:.cpp=.d)
 C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+#CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
 CXX		=	c++
 
 $(NAME_S): $(OBJ_S)
