@@ -1,0 +1,134 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ClientConnection.cpp                               :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
+/*   Updated: 2025/08/06 13:48:03 by athonda          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "ClientConnection.hpp"
+#include "HttpRequest.hpp"
+#include <string>
+#include <sstream>
+#include <iostream>
+
+ClientConnection::ClientConnection()
+{}
+
+ClientConnection::ClientConnection(int socket_fd):
+	fd(socket_fd)
+{}
+
+ClientConnection::ClientConnection(ClientConnection const &other):
+	fd(other.fd),
+	buffer(other.buffer),
+	request(other.request)
+{}
+
+ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
+{
+	if (this != &other)
+	{
+		this->fd = other.fd;
+		this->buffer = other.buffer;
+		this->request = other.request;
+	}
+	return (*this);
+}
+
+ClientConnection::~ClientConnection()
+{}
+
+int	ClientConnection::getFd() const
+{
+	return (fd);
+}
+
+const HttpRequest	&ClientConnection::getRequest() const
+{
+	return (request);
+}
+
+const std::string	&ClientConnection::getBuffer() const
+{
+	return (buffer);
+}
+
+void	ClientConnection::append_to_buffer(char const *data, size_t size)
+{
+	buffer.append(data, size);
+}
+
+bool	ClientConnection::parse_request()
+{
+	if (request.is_parse_complete)
+		return (true);
+
+	size_t	pos	= buffer.find("\r\n\r\n");
+	if (pos == std::string::npos)
+		return (false);
+
+	// start all of header part(until new line)
+	std::stringstream	ss(buffer.substr(0, pos));
+	std::string			line;
+
+	// first line
+	std::getline(ss, line);
+	if (line.empty())
+		return false;
+
+	size_t	end_pos = line.find('\r');
+	if (end_pos != std::string::npos)
+		line.erase(end_pos);
+
+	std::stringstream	ss_requestline(line);
+	ss_requestline >> request.method >> request.uri >> request.version;
+	request.is_header_parse = true;
+
+	// header main part
+	while (std::getline(ss, line) && line != "\r")
+	{
+		size_t	colon_pos = line.find(':');
+		if (colon_pos == std::string::npos)
+			return (false);
+
+		std::string	key = line.substr(0, colon_pos);
+		std::string value = line.substr(colon_pos + 2);
+
+		size_t	end_pos = line.find('\r');
+		if (end_pos != std::string::npos)
+			line.erase(end_pos);
+
+		request.headers[key] = value;
+	}
+
+	buffer.erase(0, end_pos + 4);
+	// body part
+	std::map<std::string, std::string>::iterator it = request.headers.find("content-length");
+	if (it == request.headers.end())
+	{
+		request.is_parse_complete = true;
+		return (true);
+	}
+	else
+	{
+		std::stringstream	ss_content_length(it->second);
+		size_t	content_length;
+		ss_content_length >> content_length;
+		if (ss_content_length.fail())
+			return (false);
+
+		if (buffer.size() >= content_length)
+		{
+			request.body = buffer.substr(0, content_length);
+			request.is_parse_complete = true;
+			return (true);
+		}
+		else
+			return (false);
+	}
+}
