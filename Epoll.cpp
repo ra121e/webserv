@@ -4,10 +4,12 @@
 #include <cstdio>
 #include <cstring>
 #include <exception>
+#include <map>
 #include <memory>
 #include <stdexcept>
 #include <vector>
 #include <fcntl.h>
+#include <iostream>
 
 Epoll::Epoll(int _fd): fd(_fd)
 {
@@ -20,9 +22,9 @@ Epoll::Epoll(int _fd): fd(_fd)
 Epoll::~Epoll()
 {
 	close(fd);
-	for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
+	for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
 	{
-		delete *it;
+		delete it->second;
 	}
 }
 
@@ -47,19 +49,33 @@ void	Epoll::addEventListener(int listen_fd)
 }
 
 // set client fd and event to "application form"
-void	Epoll::addClient(Client* client)
+void	Epoll::addClient(int server_fd)
 {
-	struct epoll_event	event = {};
-	event.events = EPOLLIN | EPOLLET;
-	event.data.fd = client->getFd();
+	struct sockaddr_in	client_addr = {};
+	socklen_t	addrlen = sizeof(client_addr);
+	int	client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addrlen);
 
-	// registration the client socket into epoll
-	if (epoll_ctl(fd, EPOLL_CTL_ADD, client->getFd(), &event) == -1)
+	if (client_fd < 0)
 	{
-		delete client;
 		throw std::runtime_error(strerror(errno));
 	}
-	clients.push_back(client);
+	// setting the new client socket as previous
+	// change client socket to non-blocking mode
+	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		throw std::runtime_error(strerror(errno));
+	}
+
+	struct epoll_event	event = {};
+	event.events = EPOLLIN | EPOLLET;
+	event.data.fd = client_fd;
+
+	// registration the client socket into epoll
+	if (epoll_ctl(fd, EPOLL_CTL_ADD, client_fd, &event) == -1)
+	{
+		throw std::runtime_error(strerror(errno));
+	}
+	clients[client_fd] = new ClientConnection(client_fd);
 }
 
 void	Epoll::handleEvents()
@@ -81,15 +97,11 @@ void	Epoll::handleEvents()
 			// generate new fd for all of queing new clients
 			while (true)
 			{
-				struct sockaddr_in	client_addr = {};
-				socklen_t	addrlen = sizeof(client_addr);
 				try
 				{
-					Client*	client(new Client(accept(current_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addrlen)));
-					client->setNonBlocking();
-					addClient(client);
+					addClient(current_fd);
 				}
-				catch (const std::invalid_argument&)
+				catch (const std::exception&)
 				{
 					if (errno == EAGAIN || errno == EWOULDBLOCK)
 					{
@@ -102,6 +114,10 @@ void	Epoll::handleEvents()
 		// present client request event
 		else if (events[i].events & EPOLLIN)
 		{
+			std::map<int, ClientConnection*>::iterator ite = clients.find(current_fd);
+			if (ite == clients.end())
+				throw std::runtime_error("Unexpected error encountered");
+			ClientConnection*	ccon = ite->second;
 			// read fd untill end
 			while (true)
 			{
@@ -121,22 +137,22 @@ void	Epoll::handleEvents()
 				// read complete
 				if (bytes_read == 0)
 				{
-					Client*	clientToDelete = NULL;
-
-					for (std::vector<Client*>::iterator ite = clients.begin(); ite != clients.end(); ++ite)
-					{
-						if ((*ite)->getFd() == current_fd)
-						{
-							clientToDelete = *ite;
-							break;
-						}
-					}
-					clients.erase(std::remove(clients.begin(), clients.end(), clientToDelete), clients.end());
+					delete ccon;
+					clients.erase(current_fd);
 					break ;
 				}
-				/*
-				Do something with the data read
-				*/
+				ccon->append_to_buffer(buf, static_cast<size_t>(bytes_read));
+				// std::cout << "buffer: " << ccon->getBuffer() << std::endl;
+
+				if (ccon->parse_request())
+				{
+					std::cout << ccon->getRequest().method << std::endl;
+					std::cout << ccon->getRequest().uri << std::endl;
+					std::cout << ccon->getRequest().version << std::endl;
+					std::map<std::string, std::string>::const_iterator it_tmp = ccon->getRequest().headers.begin();
+					for (; it_tmp != ccon->getRequest().headers.end(); ++it_tmp)
+						std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
+				}
 			}
 		}
 	}

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 Network::Network()
 {
@@ -64,6 +65,11 @@ void	Network::setupListener()
 			continue;
 		}
 		setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+		if (fcntl(socket_fd, F_SETFL, O_NONBLOCK) < 0)
+		{
+			close(socket_fd);
+			continue;
+		}
 		if (bind(socket_fd, ai->ai_addr, ai->ai_addrlen) < 0)
 		{
 			close(socket_fd);

@@ -1,5 +1,6 @@
 #ifndef EPOLL_HPP
 #define EPOLL_HPP
+#include <map>
 #include <unistd.h>
 #include <cerrno>
 #include <cstring>
@@ -7,14 +8,15 @@
 #include <sys/epoll.h>
 #include <vector>
 #include <netinet/in.h>
-#include "Client.hpp"
+// #include "Client.hpp"
+#include "ClientConnection.hpp"
 
 class Epoll
 {
 private:
 	int	fd;
 	std::vector<int>	server_fds;
-	std::vector<Client*>	clients;
+	std::map<int, ClientConnection*>	clients;
 	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
 
@@ -25,7 +27,7 @@ public:
 	~Epoll();
 	int	getFd() const;
 	void	addEventListener(int listen_fd);
-	void	addClient(Client* client);
+	void	addClient(int server_fd);
 	void	handleEvents();
 };
 

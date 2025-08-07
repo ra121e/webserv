@@ -3,18 +3,22 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/06 13:48:03 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/07 18:13:20 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ClientConnection.hpp"
 #include "HttpRequest.hpp"
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <fcntl.h>
+#include <cerrno>
+#include <unistd.h>
 
 ClientConnection::ClientConnection()
 {}
@@ -24,7 +28,7 @@ ClientConnection::ClientConnection(int socket_fd):
 {}
 
 ClientConnection::ClientConnection(ClientConnection const &other):
-	fd(other.fd),
+	fd(dup(other.fd)),
 	buffer(other.buffer),
 	request(other.request)
 {}
@@ -33,7 +37,7 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 {
 	if (this != &other)
 	{
-		this->fd = other.fd;
+		this->fd = dup(other.fd);
 		this->buffer = other.buffer;
 		this->request = other.request;
 	}
@@ -41,7 +45,9 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 }
 
 ClientConnection::~ClientConnection()
-{}
+{
+	close(fd);
+}
 
 int	ClientConnection::getFd() const
 {
@@ -99,9 +105,9 @@ bool	ClientConnection::parse_request()
 		std::string	key = line.substr(0, colon_pos);
 		std::string value = line.substr(colon_pos + 2);
 
-		size_t	end_pos = line.find('\r');
-		if (end_pos != std::string::npos)
-			line.erase(end_pos);
+		size_t	epos = line.find('\r');
+		if (epos != std::string::npos)
+			line.erase(epos);
 
 		request.headers[key] = value;
 	}
