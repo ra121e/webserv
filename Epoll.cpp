@@ -51,31 +51,19 @@ void	Epoll::addEventListener(int listen_fd)
 // set client fd and event to "application form"
 void	Epoll::addClient(int server_fd)
 {
-	struct sockaddr_in	client_addr = {};
-	socklen_t	addrlen = sizeof(client_addr);
-	int	client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addrlen);
-
-	if (client_fd < 0)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
-	// setting the new client socket as previous
-	// change client socket to non-blocking mode
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) == -1)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
+	ClientConnection*	client = new ClientConnection(server_fd);
 
 	struct epoll_event	event = {};
 	event.events = EPOLLIN | EPOLLET;
-	event.data.fd = client_fd;
+	event.data.fd = client->getFd();
 
 	// registration the client socket into epoll
-	if (epoll_ctl(fd, EPOLL_CTL_ADD, client_fd, &event) == -1)
+	if (epoll_ctl(fd, EPOLL_CTL_ADD, client->getFd(), &event) == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
-	clients[client_fd] = new ClientConnection(client_fd);
+	client->retrieveHost();
+	clients[client->getFd()] = client;
 }
 
 void	Epoll::handleEvents()

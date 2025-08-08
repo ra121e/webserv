@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 11:24:06 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/08 15:53:02 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,8 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include <cstring>
+#include <netdb.h>
+#include <stdexcept>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -24,9 +26,20 @@
 ClientConnection::ClientConnection()
 {}
 
-ClientConnection::ClientConnection(int socket_fd):
-	fd(socket_fd)
-{}
+ClientConnection::ClientConnection(int server_fd):
+addr_len(sizeof(client_addr)), fd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len))
+{
+	if (fd < 0)
+	{
+		throw std::invalid_argument(strerror(errno));
+	}
+	// setting the new client socket as previous
+	// change client socket to non-blocking mode
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+	{
+		throw std::runtime_error(strerror(errno));
+	}
+}
 
 ClientConnection::ClientConnection(ClientConnection const &other):
 	fd(dup(other.fd)),
@@ -163,4 +176,18 @@ void	ClientConnection::makeResponse()
 		response.setBody("<h1>404 Not Found</h1>", "text/html");
 	}
 	res_buffer = response.makeString();
+}
+
+void	ClientConnection::retrieveHost()
+{
+	if (getnameinfo(reinterpret_cast<struct sockaddr*>(&client_addr),
+	addr_len,
+	host,
+	sizeof(host),
+	NULL,
+	0,
+	NI_NUMERICHOST) != 0)
+	{
+		throw std::runtime_error(strerror(errno));	
+	}
 }

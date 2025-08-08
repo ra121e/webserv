@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 10:26:13 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/08 15:43:36 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,9 @@
 
 # include "HttpRequest.hpp"
 # include "HttpResponse.hpp"
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 class ClientConnection
 {
@@ -35,11 +38,13 @@ class ClientConnection
 		void	append_to_buffer(char const *data, size_t size);
 		bool	parse_request();
 		void	makeResponse();
-//		bool	parse_headers();
-//		bool	parse_body();
+		void	retrieveHost();
 
 	private:
+		socklen_t		addr_len;
+		struct sockaddr_in	client_addr;
 		int				fd;
+		char			host[NI_MAXHOST];
 		std::string		buffer;
 		std::string		res_buffer;
 		HttpRequest		request;
