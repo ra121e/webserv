@@ -105,7 +105,7 @@ void	Epoll::handleEvents()
 			std::map<int, ClientConnection*>::iterator ite = clients.find(current_fd);
 			if (ite == clients.end())
 				throw std::runtime_error("Unexpected error encountered");
-			ClientConnection*	ccon = ite->second;
+			ClientConnection*	client = ite->second;
 			// read fd untill end
 			while (true)
 			{
@@ -125,25 +125,25 @@ void	Epoll::handleEvents()
 				// read complete
 				if (bytes_read == 0)
 				{
-					delete ccon;
+					delete client;
 					clients.erase(current_fd);
 					break ;
 				}
-				ccon->append_to_buffer(buf, static_cast<size_t>(bytes_read));
-				// std::cout << "buffer: " << ccon->getBuffer() << std::endl;
+				client->append_to_buffer(buf, static_cast<size_t>(bytes_read));
+				// std::cout << "buffer: " << client->getBuffer() << std::endl;
 
-				if (ccon->parse_request())
+				if (client->parse_request())
 				{
-					std::cout << ccon->getRequest().method << std::endl;
-					std::cout << ccon->getRequest().uri << std::endl;
-					std::cout << ccon->getRequest().version << std::endl;
-					std::map<std::string, std::string>::const_iterator it_tmp = ccon->getRequest().headers.begin();
-					for (; it_tmp != ccon->getRequest().headers.end(); ++it_tmp)
+					std::cout << client->getRequest().method << std::endl;
+					std::cout << client->getRequest().uri << std::endl;
+					std::cout << client->getRequest().version << std::endl;
+					std::map<std::string, std::string>::const_iterator it_tmp = client->getRequest().headers.begin();
+					for (; it_tmp != client->getRequest().headers.end(); ++it_tmp)
 						std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
 
-					ccon->makeResponse();
-					std::cout << "Response Ready! to FD: " << ccon->getFd() << std::endl;
-					std::cout << ccon->getResponseBuffer() << std::endl;
+					client->makeResponse();
+					std::cout << "Response Ready! to FD: " << client->getFd() << std::endl;
+					std::cout << client->getResponseBuffer() << std::endl;
 				}
 			}
 		}
