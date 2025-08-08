@@ -3,15 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/07 18:13:20 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/08 11:24:06 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ClientConnection.hpp"
 #include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
 #include <cstring>
 #include <string>
 #include <sstream>
@@ -62,6 +63,16 @@ const HttpRequest	&ClientConnection::getRequest() const
 const std::string	&ClientConnection::getBuffer() const
 {
 	return (buffer);
+}
+
+const HttpResponse	&ClientConnection::getResponse() const
+{
+	return (response);
+}
+
+const std::string	&ClientConnection::getResponseBuffer() const
+{
+	return (res_buffer);
 }
 
 void	ClientConnection::append_to_buffer(char const *data, size_t size)
@@ -137,4 +148,19 @@ bool	ClientConnection::parse_request()
 		else
 			return (false);
 	}
+}
+
+void	ClientConnection::makeResponse()
+{
+	if (request.method == "GET" && request.uri == "/")
+	{
+		response.setBody("<h1>Hello, 42World!</h1>", "text/html");
+	}
+	else
+	{
+		response.status_code = 404;
+		response.status_message = "Not Found";
+		response.setBody("<h1>404 Not Found</h1>", "text/html");
+	}
+	res_buffer = response.makeString();
 }

@@ -152,6 +152,10 @@ void	Epoll::handleEvents()
 					std::map<std::string, std::string>::const_iterator it_tmp = ccon->getRequest().headers.begin();
 					for (; it_tmp != ccon->getRequest().headers.end(); ++it_tmp)
 						std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
+
+					ccon->makeResponse();
+					std::cout << "Response Ready! to FD: " << ccon->getFd() << std::endl;
+					std::cout << ccon->getResponseBuffer() << std::endl;
 				}
 			}
 		}

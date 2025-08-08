@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/07 18:09:29 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/08 10:26:13 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define CLIENTCONNECTION_HPP
 
 # include "HttpRequest.hpp"
+# include "HttpResponse.hpp"
 
 class ClientConnection
 {
@@ -28,15 +29,22 @@ class ClientConnection
 		const HttpRequest	&getRequest() const;
 		const std::string	&getBuffer() const;
 
+		const HttpResponse	&getResponse() const;
+		const std::string	&getResponseBuffer() const;
+
 		void	append_to_buffer(char const *data, size_t size);
 		bool	parse_request();
+		void	makeResponse();
 //		bool	parse_headers();
 //		bool	parse_body();
 
 	private:
-		int			fd;
-		std::string	buffer;
-		HttpRequest	request;
+		int				fd;
+		std::string		buffer;
+		std::string		res_buffer;
+		HttpRequest		request;
+		HttpResponse	response;
+
 
 };
 
