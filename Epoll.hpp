@@ -28,6 +28,7 @@ public:
 	int	getFd() const;
 	void	addEventListener(int listen_fd);
 	void	addClient(int server_fd);
+	void	modifyEventListener(ClientConnection *client);
 	void	handleEvents();
 };
 

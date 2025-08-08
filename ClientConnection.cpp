@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 15:53:02 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/08 19:22:03 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -178,6 +178,22 @@ void	ClientConnection::makeResponse()
 	res_buffer = response.makeString();
 }
 
+bool	ClientConnection::sendResponse()
+{
+	if (res_buffer.empty())
+		return (true);
+
+	ssize_t	n = write(getFd(), res_buffer.c_str(), res_buffer.size());
+	if (n == -1)
+	{
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return (false);
+		return (false);
+	}
+	res_buffer.erase(0, static_cast<size_t>(n));
+	return (res_buffer.empty());
+}
+
 void	ClientConnection::retrieveHost()
 {
 	if (getnameinfo(reinterpret_cast<struct sockaddr*>(&client_addr),
@@ -188,6 +204,6 @@ void	ClientConnection::retrieveHost()
 	0,
 	NI_NUMERICHOST) != 0)
 	{
-		throw std::runtime_error(strerror(errno));	
+		throw std::runtime_error(strerror(errno));
 	}
 }

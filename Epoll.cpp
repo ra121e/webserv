@@ -66,6 +66,20 @@ void	Epoll::addClient(int server_fd)
 	clients[client->getFd()] = client;
 }
 
+void Epoll::modifyEventListener(ClientConnection *client)
+{
+	// set server fd and event into event struct (its like "entry sheet" or "application form")
+	struct epoll_event event = {};
+	event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+	event.data.fd = client->getFd();
+
+	// registration event into epoll
+	if (epoll_ctl(fd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
+	{
+		throw std::runtime_error(strerror(errno));
+	}
+}
+
 void	Epoll::handleEvents()
 {
 	// ask kernel of event happening
@@ -144,7 +158,22 @@ void	Epoll::handleEvents()
 					client->makeResponse();
 					std::cout << "Response Ready! to FD: " << client->getFd() << std::endl;
 					std::cout << client->getResponseBuffer() << std::endl;
+
+					modifyEventListener(client);
 				}
+			}
+		}
+		else if (events[i].events & EPOLLOUT)
+		{
+			std::map<int, ClientConnection*>::iterator ite = clients.find(current_fd);
+			if (ite == clients.end())
+				throw std::runtime_error("Unexpected error encountered");
+			ClientConnection*	client = ite->second;
+
+			if (client->sendResponse())
+			{
+				delete client;
+				clients.erase(current_fd);
 			}
 		}
 	}
