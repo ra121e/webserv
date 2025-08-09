@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/17 17:09:41 by apoh              #+#    #+#             */
-/*   Updated: 2025/08/06 18:09:34 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/09 16:43:00 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -335,7 +335,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 						ssize_t bytes_read = read(pipe_stdout[0], buf, sizeof(buf));
 						if (bytes_read == -1)
 						{
-							if (errno == EAGAIN || errno == EWOULDBLOCK)
+							if (errno == EAGAIN)
 							{
 								// No more data for now
 								break;
@@ -355,7 +355,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 						}
 						else
 						{
-							cgi_output.append(buf, bytes_read);
+							cgi_output.append(buf, static_cast<size_t>(bytes_read));
 						}
 					}
 				}

@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+         #
+#    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/08/08 16:47:34 by athonda          ###   ########.fr        #
+#    Updated: 2025/08/09 16:34:27 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,8 +29,36 @@ S_DEP	=	$(SRC_S:.cpp=.d)
 C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+# CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
 # CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+CXXFLAGS	=	-std=c++98 -Wall -Wextra -Werror -Wpedantic -MMD -MP -ggdb3 \
+    -Wcast-align=strict \
+    -Wcast-qual \
+    -Wconversion \
+    -Wdate-time \
+    -Wdouble-promotion \
+    -Wduplicated-cond \
+    -Wduplicated-branches \
+    -Wfloat-equal \
+    -Wformat=2 \
+    -Wimplicit-fallthrough=5 \
+    -Wlogical-op \
+    -Wmissing-declarations \
+    -Wmissing-include-dirs \
+    -Wnon-virtual-dtor \
+    -Wnull-dereference \
+    -Wold-style-cast \
+    -Woverloaded-virtual \
+    -Wshadow \
+    -Wsign-conversion \
+    -Wsuggest-override \
+    -Wswitch-default \
+    -Wswitch-enum \
+    -Wundef \
+    -Wunused-macros \
+    -Wuseless-cast \
+    -fanalyzer\
+	-Wno-analyzer-possible-null-argument
 
 CXX		=	c++
 

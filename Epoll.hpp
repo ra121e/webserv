@@ -8,7 +8,6 @@
 #include <sys/epoll.h>
 #include <vector>
 #include <netinet/in.h>
-// #include "Client.hpp"
 #include "ClientConnection.hpp"
 
 class Epoll

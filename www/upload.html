@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File Upload & Delete Demo</title>
+    <link rel="stylesheet" href="style">
+    <style>
+        main { max-width: 500px; margin: auto; }
+        form, .delete-section { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 5px; background: white; }
+        label { display: block; margin-bottom: 0.5em; }
+        button { padding: 0.5em 1em; }
+        #status { margin-top: 1em; font-weight: bold; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Upload & Delete Test</h1>
+    <nav>
+        <a href="/">Home</a>
+        <a href="about">About</a>
+        <a href="status">Status</a>
+        <a href="upload">Upload/Delete</a>
+    </nav>
+</header>
+
+<main>
+    <h2>Upload a File (POST)</h2>
+    <form id="uploadForm" method="post" enctype="multipart/form-data">
+        <label>Select file:
+            <input type="file" name="file" required>
+        </label>
+        <button type="submit">Upload</button>
+    </form>
+
+    <h2>Delete a File (DELETE)</h2>
+    <div class="delete-section">
+        <label>File name (on server):
+            <input type="text" id="deleteFilename" placeholder="example.txt">
+        </label>
+        <button id="deleteButton">Delete</button>
+    </div>
+
+    <div id="status"></div>
+</main>
+
+<script>
+document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+
+    try {
+        const res = await fetch("/upload", { method: "POST", body: formData });
+        document.getElementById("status").textContent =
+            res.ok ? "✅ File uploaded successfully" : `❌ Upload failed: ${res.status}`;
+    } catch (err) {
+        document.getElementById("status").textContent = "❌ Error: " + err;
+    }
+});
+
+document.getElementById("deleteButton").addEventListener("click", async function () {
+    const filename = document.getElementById("deleteFilename").value.trim();
+    if (!filename) {
+        document.getElementById("status").textContent = "❌ Please enter a file name to delete";
+        return;
+    }
+
+    try {
+        const res = await fetch("/upload/" + encodeURIComponent(filename), { method: "DELETE" });
+        document.getElementById("status").textContent =
+            res.ok ? "✅ File deleted successfully" : `❌ Delete failed: ${res.status}`;
+    } catch (err) {
+        document.getElementById("status").textContent = "❌ Error: " + err;
+    }
+});
+</script>
+
+<footer>
+    <p>&copy; 2025 My Web Server Project</p>
+</footer>
+</body>
+</html>

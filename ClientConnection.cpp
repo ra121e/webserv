@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 15:53:02 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/09 16:43:41 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -191,7 +191,7 @@ bool	ClientConnection::sendResponse()
 	ssize_t	n = write(getFd(), res_buffer.c_str(), res_buffer.size());
 	if (n == -1)
 	{
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
+		if (errno == EAGAIN)
 			return (false);
 		return (false);
 	}

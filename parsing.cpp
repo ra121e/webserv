@@ -147,7 +147,7 @@ static void	parse_listen(std::istringstream &ss, Server& serv)
 
 static void	parse_server(std::ifstream& infile, std::istringstream& iss, Config& conf)
 {
-	Server*		serv(new Server());
+	Server*		serv = new Server();
 	std::string	word;
 
 	iss >> word;
