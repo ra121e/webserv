@@ -9,12 +9,13 @@
 #include <vector>
 #include <netinet/in.h>
 #include "ClientConnection.hpp"
+#include "Server.hpp"
 
 class Epoll
 {
 private:
 	int	fd;
-	std::vector<int>	server_fds;
+	std::map<int, Server*>	servers;
 	std::map<int, ClientConnection*>	clients;
 	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
@@ -25,7 +26,7 @@ public:
 	Epoll(int _fd);
 	~Epoll();
 	int	getFd() const;
-	void	addEventListener(int listen_fd);
+	void	addEventListener(Server* server, int listen_fd);
 	void	addClient(int server_fd);
 	void	modifyEventListener(ClientConnection *client);
 	void	handleEvents();

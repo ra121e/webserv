@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/06 22:31:28 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/09 20:42:01 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,7 +44,7 @@ int	main(int argc, char **argv)
 		{
 			for (std::vector<Network*>::const_iterator n_it = (*s_it)->getNetworks().begin(); n_it != (*s_it)->getNetworks().end(); ++n_it)
 			{
-				epoll.addEventListener((*n_it)->getFd());
+				epoll.addEventListener(*s_it, (*n_it)->getFd());
 			}
 		}
 		std::signal(SIGINT, handle_sigint);

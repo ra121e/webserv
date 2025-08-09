@@ -33,7 +33,7 @@ int	Epoll::getFd() const
 	return fd;
 }
 
-void	Epoll::addEventListener(int listen_fd)
+void	Epoll::addEventListener(Server* server, int listen_fd)
 {
 	// set server fd and event into event struct (its like "entry sheet" or "application form")
 	struct epoll_event	event = {};
@@ -45,7 +45,7 @@ void	Epoll::addEventListener(int listen_fd)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
-	server_fds.push_back(listen_fd);
+	servers[listen_fd] = server;
 }
 
 // set client fd and event to "application form"
@@ -92,9 +92,9 @@ void	Epoll::handleEvents()
 	for (size_t i = 0; i < static_cast<size_t>(num_events); ++i)
 	{
 		int current_fd = events[i].data.fd;
-		std::vector<int>::iterator	it = std::find(server_fds.begin(), server_fds.end(), current_fd);
+		std::map<int, Server*>::iterator	it = servers.find(current_fd);
 		// new client access event
-		if (it != server_fds.end())
+		if (it != servers.end())
 		{
 			// generate new fd for all of queing new clients
 			while (true)
