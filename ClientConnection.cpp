@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/09 16:43:41 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/09 19:10:47 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,12 +93,12 @@ std::string ClientConnection::getHost() const
 	return std::string(host);
 }
 
-void	ClientConnection::append_to_buffer(char const *data, size_t size)
+void	ClientConnection::appendToBuffer(char const *data, size_t size)
 {
 	buffer.append(data, size);
 }
 
-bool	ClientConnection::parse_request()
+bool	ClientConnection::parseRequest()
 {
 	if (request.is_parse_complete)
 		return (true);
@@ -209,6 +209,6 @@ void	ClientConnection::retrieveHost()
 	0,
 	NI_NUMERICHOST) != 0)
 	{
-		throw std::runtime_error(strerror(errno));	
+		throw std::runtime_error(strerror(errno));
 	}
 }

@@ -124,7 +124,7 @@ void	Epoll::handleEvents()
 
 			if (events[i].events & EPOLLIN)
 			{
-				
+
 				// read fd untill end
 				while (true)
 				{
@@ -148,10 +148,10 @@ void	Epoll::handleEvents()
 						clients.erase(current_fd);
 						break ;
 					}
-					client->append_to_buffer(buf, static_cast<size_t>(bytes_read));
+					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
 					// std::cout << "buffer: " << client->getBuffer() << std::endl;
 
-					if (client->parse_request())
+					if (client->parseRequest())
 					{
 						std::cout << client->getRequest().method << std::endl;
 						std::cout << client->getRequest().uri << std::endl;

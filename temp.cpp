@@ -217,10 +217,10 @@ int	main(int argc, char **argv)
 								connection_closed = true;
 								break ;
 							}
-							ccon->append_to_buffer(buf, n);
+							ccon->appendToBuffer(buf, n);
 							std::cout << "buffer: " << ccon->getBuffer() << std::endl;
 
-							if (ccon->parse_request())
+							if (ccon->parseRequest())
 							{
 								std::cout << ccon->getRequest().method << std::endl;
 								std::cout << ccon->getRequest().uri << std::endl;
