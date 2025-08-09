@@ -18,6 +18,8 @@
 # include <string>
 # include <map>
 # include "ClientConnection.hpp"
+# include "Network.hpp"
+# include <sys/epoll.h>
 
 bool is_cgi_script(const std::string &path);
 int create_pipe(int fds[2]);

@@ -29,7 +29,9 @@ S_DEP	=	$(SRC_S:.cpp=.d)
 C_DEP	=	$(SRC_C:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+# CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
+
 CXX		=	c++
 
 $(NAME_S): $(OBJ_S)

@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "cgi_handler.hpp"
+#include "ClientConnection.hpp"
 
 bool is_cgi_script(const std::string &path) // checks if path starts with /cgi/bin or is it a .cgi file. Have not used this yet but it would be a good function to keep // 
 {
@@ -100,7 +101,7 @@ char **map_to_envp(const std::map<std::string, std::string> &env_map) // this is
 	envp[index] = NULL;
 	return (envp);
 }
-o
+
 void free_envp(char **envp) // freeing the new envp variable that you have created //
 {
 	if (envp == NULL)
@@ -184,27 +185,28 @@ std::string getReferer(const std::map<std::string, std::string> &headers) // und
 	return "";
 }
 
-std::string getPathInfo(const std::string &uri, const std::string &script_path) // this might be used, this might not be used, leave it first. Gives you additional info after the path directory //
-{
-	std::size_t pos = uri.find('?'); 
-	std::string path;
-	if (pos == std::string::npos)
-		path = uri;
-	else
-		path = uri.substr(0, pos);
-	if (path.compare(0, script_path.length(), script_path) == 0)
-		return path.substr(script_path.length());
-	return "";
-}
+// std::string getPathInfo(const std::string &uri, const std::string &script_path) // this might be used, this might not be used, leave it first. Gives you additional info after the path directory //
+// {
+// 	std::size_t pos = uri.find('?'); 
+// 	std::string path;
+// 	if (pos == std::string::npos)
+// 		path = uri;
+// 	else
+// 		path = uri.substr(0, pos);
+// 	if (path.compare(0, script_path.length(), script_path) == 0)
+// 		return path.substr(script_path.length());
+// 	return "";
+// }
 
 int run_cgi_script(ClientConnection &client, const std::string &script_path, const Network &network) // this is the main logic i take over from the main, we are to implement this in our main function // 
 {
+	(void)script_path;
 	int pipe_stdin[2]; // creating one pipe for stdin //
 	int pipe_stdout[2]; // creating one pipe for stdout so the child process can process // 
 	
 	if (create_pipe(pipe_stdin) == -1 || create_pipe(pipe_stdout) == -1) // pipe creation fail just error out //
 		return (-1);
-	HttpRequest &req = client.getRequest(); // creating a class instance of HttpRequest based on ClientConnection class // 
+	HttpRequest req = client.getRequest(); // creating a class instance of HttpRequest based on ClientConnection class // 
 	
 	std::map<std::string, std::string> env_map; // Using map to store all the data, the functions below extract the data // 
 	env_map["REQUEST_METHOD"] = req.method;
@@ -219,7 +221,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 	env_map["HTTP_COOKIE"] = getCookie(req.headers);
 	env_map["HTTP_REFERER"] = getReferer(req.headers);
 	env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
-	env_map["PATH_INFO"] = getPathInfo(req.uri);
+	// env_map["PATH_INFO"] = getPathInfo(req.uri);
 	
 	char	**cgi_envp = map_to_envp(env_map); // function to copy all the env_map variables into a environment so that i can run execve // 
 	if (cgi_envp == NULL)
@@ -371,6 +373,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 		// Use cgi_output as the CGI script response content
 		std::cout << "Parent received:\n" << cgi_output << std::endl;
 	}
+	return (0);
 }
 
 // int	main(int ac, char **av, char **envp)
