@@ -51,7 +51,8 @@ void	Epoll::addEventListener(Server* server, int listen_fd)
 // set client fd and event to "application form"
 void	Epoll::addClient(int server_fd)
 {
-	ClientConnection*	client = new ClientConnection(server_fd);
+	Server				*server = servers[server_fd];
+	ClientConnection	*client = new ClientConnection(server_fd, server);
 
 	struct epoll_event	event = {};
 	event.events = EPOLLIN | EPOLLET;

@@ -6,7 +6,7 @@
 /*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/09 19:10:47 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/09 22:03:50 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,8 +26,10 @@
 ClientConnection::ClientConnection()
 {}
 
-ClientConnection::ClientConnection(int server_fd):
-addr_len(sizeof(client_addr)), fd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len))
+ClientConnection::ClientConnection(int server_fd, Server *srv):
+	addr_len(sizeof(client_addr)),
+	fd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)),
+	server(srv)
 {
 	if (fd < 0)
 	{
@@ -43,6 +45,7 @@ addr_len(sizeof(client_addr)), fd(accept(server_fd, reinterpret_cast<struct sock
 
 ClientConnection::ClientConnection(ClientConnection const &other):
 	fd(dup(other.fd)),
+	server(new Server(*other.server)),
 	buffer(other.buffer),
 	request(other.request)
 {}
@@ -54,6 +57,8 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 		this->fd = dup(other.fd);
 		this->buffer = other.buffer;
 		this->request = other.request;
+		delete this->server;
+		this->server = new Server(*other.server);
 	}
 	return (*this);
 }
