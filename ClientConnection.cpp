@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 19:22:03 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/08 15:53:02 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,11 @@ const HttpResponse	&ClientConnection::getResponse() const
 const std::string	&ClientConnection::getResponseBuffer() const
 {
 	return (res_buffer);
+}
+
+std::string ClientConnection::getHost() const
+{
+	return std::string(host);
 }
 
 void	ClientConnection::append_to_buffer(char const *data, size_t size)
@@ -204,6 +209,6 @@ void	ClientConnection::retrieveHost()
 	0,
 	NI_NUMERICHOST) != 0)
 	{
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error(strerror(errno));	
 	}
 }

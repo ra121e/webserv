@@ -10,20 +10,22 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "cgi_utils.hpp"
-#include <sys/types.h>
+#include "cgi_handler.hpp"
 
-bool	is_cgi_script(const std::string &path) // checks if path starts with /cgi/cbin or is it a .cgi file. Have not used this yet but it would be a good function to keep // 
+bool is_cgi_script(const std::string &path) // checks if path starts with /cgi/bin or is it a .cgi file. Have not used this yet but it would be a good function to keep // 
 {
-	if (path.substr(0, 9) == "/cgi-bin/")
-		return (true);
+	if (path.length() >= 9)
+	{
+		if (path.substr(0, 9) == "/cgi-bin/")
+			return (true);
+	}
 	std::string extension = ".cgi"; 
 	if (path.length() >= extension.length() && path.substr(path.length() - extension.length()) == extension)
 		return (true);
 	return (false);
 }
 
-int	create_pipe(int fds[2]) // pipe creation. One for parent one for child, fd[0] is read end fd[1] is write in //
+int create_pipe(int fds[2]) // pipe creation. One for parent one for child, fd[0] is read end fd[1] is write in //
 {
 	if (pipe(fds) == -1)
 	{
@@ -33,23 +35,23 @@ int	create_pipe(int fds[2]) // pipe creation. One for parent one for child, fd[0
 	return (0);
 }
 
-size_t	ft_strlen(const char *s) // if using libft, this function can throw away //
+size_t ft_strlen(const char *s) // if using libft, this function can throw away //
 {
 	if (s == NULL)
 		return (0);
-	size_t	len = 0;
+	size_t len = 0;
 	while (s[len] != '\0')
 		len++;
 	return (len);
 }
 
-char	*ft_strdup(const char *s) // same, if using libft, this function can throw away //
+char *ft_strdup(const char *s) // same, if using libft, this function can throw away //
 {
 	if (s == NULL)
 		return (NULL);
-	size_t	len = ft_strlen(s);
-	char	*dup = new char[len + 1];
-	size_t	i = 0;
+	size_t len = ft_strlen(s);
+	char *dup = new char[len + 1];
+	size_t i = 0;
 	
 	while (i < len)
 	{
@@ -60,7 +62,7 @@ char	*ft_strdup(const char *s) // same, if using libft, this function can throw 
 	return (dup);
 }
 
-size_t	ft_strlcpy(char *dest, const char *src, size_t size) // same, if using libft, this function can throw away // 
+size_t ft_strlcpy(char *dest, const char *src, size_t size) // same, if using libft, this function can throw away // 
 {
 	size_t i = 0;
 	
@@ -75,16 +77,16 @@ size_t	ft_strlcpy(char *dest, const char *src, size_t size) // same, if using li
 	return (ft_strlen(src));
 }
 
-char	**map_to_envp(const std::map<std::string, std::string> &env_map) // this is to create a new envp variable which has your HTTP methods, and all the other variables that are associated //
+char **map_to_envp(const std::map<std::string, std::string> &env_map) // this is to create a new envp variable which has your HTTP methods, and all the other variables that are associated //
 {
-	char	**envp = new char*[env_map.size() + 1]; // hardcoded a env_map variable in main //
-	size_t	index = 0;
+	char **envp = new char*[env_map.size() + 1]; // run_cgi function for env_map //
+	size_t index = 0;
 	
 	for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
 		it != env_map.end(); ++it) // const iterator so that values doesnt change //
 	{
 		std::string pair = it->first + "=" + it->second;
-		char	*cstr = new char[pair.size() + 1];
+		char *cstr = new char[pair.size() + 1];
 		if (cstr == NULL)
 		{
 			for (size_t j = 0; j < index; ++j)
@@ -98,8 +100,8 @@ char	**map_to_envp(const std::map<std::string, std::string> &env_map) // this is
 	envp[index] = NULL;
 	return (envp);
 }
-
-void	free_envp(char **envp) // freeing the new envp variable that you have created //
+o
+void free_envp(char **envp) // freeing the new envp variable that you have created //
 {
 	if (envp == NULL)
 		return;
@@ -108,12 +110,13 @@ void	free_envp(char **envp) // freeing the new envp variable that you have creat
 	delete[] envp;
 }
 
-ssize_t	write_all(int fd, const char *buf, size_t size) // making sure no partial writes Loop it through //
+ssize_t write_all(int fd, const char *buf, size_t size) // making sure no partial writes Loop it through //
 {
-	ssize_t	total_written = 0;
+	ssize_t total_written = 0;
 	while (total_written < static_cast<ssize_t>(size))
 	{
-		ssize_t	written = write(fd, buf + total_written, size - static_cast<size_t>(total_written));
+		ssize_t written = write(fd, buf + total_written,
+					size - static_cast<size_t>(total_written));
 		if (written <= 0)
 		{
 			if (errno == EINTR) // Macro for signal interrupting the write process //
@@ -125,6 +128,250 @@ ssize_t	write_all(int fd, const char *buf, size_t size) // making sure no partia
 	return (total_written); // return total amount of data written //
 }
 
+std::string getQueryString(const std::string &uri) // getting the query string on GET method //
+{
+	std::size_t pos = uri.find('?'); // ? is the point where the query string starts //
+	if (pos == std::string::npos)
+		return "";
+	return uri.substr(pos + 1);
+}
+
+std::string getContentLength(const std::map<std::string, std::string> &headers) // Under the headers tag, retrieve Content-Length //
+{
+	std::map<std::string, std::string>::const_iterator it = headers.find("Content-Length");
+	if (it != headers.end())
+		return it->second;
+	return "";
+}
+
+std::string getContentType(const std::map<std::string, std::string> &headers) // Under the headers tag, retrieve Content-Type //
+{
+	std::map<std::string, std::string>::const_iterator it = headers.find("Content-Type");
+	if (it != headers.end())
+		return it->second;
+	return "";
+}
+
+std::string getScriptName(const std::string &uri) // script name is the one before the ? // 
+{
+	std::size_t pos = uri.find('?');
+	if (pos == std::string::npos)
+		return uri; // if no question mark, then its the whole script name //
+	return uri.substr(0, pos);
+}
+
+std::string getUserAgent(const std::map<std::string, std::string> &headers) // under the headers tag, retrieve User-Agent //
+{
+	std::map<std::string, std::string>::const_iterator it = headers.find("User-Agent");
+	if (it != headers.end())
+		return it->second;
+	return "";
+}
+
+std::string getCookie(const std::map<std::string, std::string> &headers) // under the headers tag, retrieve Cookie //
+{
+	std::map<std::string, std::string>::const_iterator it = headers.find("Cookie");	
+	if (it != headers.end())
+		return it->second;
+	return "";
+}
+
+std::string getReferer(const std::map<std::string, std::string> &headers) // under the headers tag, retrieve Referer //
+{
+	std::map<std::string, std::string>::const_iterator it = headers.find("Referer");
+	if (it != headers.end())
+		return it->second;
+	return "";
+}
+
+std::string getPathInfo(const std::string &uri, const std::string &script_path) // this might be used, this might not be used, leave it first. Gives you additional info after the path directory //
+{
+	std::size_t pos = uri.find('?'); 
+	std::string path;
+	if (pos == std::string::npos)
+		path = uri;
+	else
+		path = uri.substr(0, pos);
+	if (path.compare(0, script_path.length(), script_path) == 0)
+		return path.substr(script_path.length());
+	return "";
+}
+
+int run_cgi_script(ClientConnection &client, const std::string &script_path, const Network &network) // this is the main logic i take over from the main, we are to implement this in our main function // 
+{
+	int pipe_stdin[2]; // creating one pipe for stdin //
+	int pipe_stdout[2]; // creating one pipe for stdout so the child process can process // 
+	
+	if (create_pipe(pipe_stdin) == -1 || create_pipe(pipe_stdout) == -1) // pipe creation fail just error out //
+		return (-1);
+	HttpRequest &req = client.getRequest(); // creating a class instance of HttpRequest based on ClientConnection class // 
+	
+	std::map<std::string, std::string> env_map; // Using map to store all the data, the functions below extract the data // 
+	env_map["REQUEST_METHOD"] = req.method;
+	env_map["QUERY_STRING"] = getQueryString(req.uri);
+	env_map["CONTENT_LENGTH"] = getContentLength(req.headers);
+	env_map["CONTENT_TYPE"] = getContentType(req.headers);
+	env_map["SCRIPT_NAME"] = getScriptName(req.uri);
+	env_map["SERVER_PORT"] = network.getPort();
+	env_map["SERVER_PROTOCOL"] = req.version;
+	env_map["REMOTE_ADDR"] = client.getHost();
+	env_map["HTTP_USER_AGENT"] = getUserAgent(req.headers);
+	env_map["HTTP_COOKIE"] = getCookie(req.headers);
+	env_map["HTTP_REFERER"] = getReferer(req.headers);
+	env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
+	env_map["PATH_INFO"] = getPathInfo(req.uri);
+	
+	char	**cgi_envp = map_to_envp(env_map); // function to copy all the env_map variables into a environment so that i can run execve // 
+	if (cgi_envp == NULL)
+	{
+		std::cerr << "Failed to allocate env." << std::endl;
+		return (-1);
+	}
+	pid_t	pid = fork(); // forking to let the child inherit all the env_variables // 
+	if (pid == -1)
+	{
+		perror("fork failed");
+		free_envp(cgi_envp);
+		return (-1);
+	}
+	if (pid == 0)
+	{
+		close(pipe_stdin[1]); // child dont write to stdin, they only read data from stdin //
+		close(pipe_stdout[0]); // child dont read from stdout, they only write data to stdout // 
+		if (dup2(pipe_stdin[0], STDIN_FILENO) == -1) // dup2 the readend of stdin since thats needed // 
+		{
+			perror("dup2 failed for stdin");
+			exit(EXIT_FAILURE);
+		}
+		if (dup2(pipe_stdout[1], STDOUT_FILENO) == -1) // dup2 the write end of stdout as whatever the child needs to output goes into that area // 
+		{
+			perror("dup2 failed for stdout");
+			exit(EXIT_FAILURE);
+		}
+		close(pipe_stdin[1]); // close if dup2 successful //
+		close(pipe_stdout[0]); // close if dup2 successful // 
+		const char *cgi_path = "/home/apoh/Documents/test/webserv/cgi-bin/my_cgi.cgi"; // location of my cgi script // 
+		char	*argv[] = {const_cast<char*>(cgi_path), NULL}; // construction of argv, exceve requires argv to be of a certain prototype, hence need to cast // 
+		execve(cgi_path, argv, cgi_envp);
+ 		perror("execve failed"); // if execve failed // 
+ 		exit(EXIT_FAILURE); // exit if fail // 
+	}
+	else
+	{
+		close(pipe_stdin[0]); // in the parent, not needed to read data from stdin //
+		close(pipe_stdout[1]); // in the parent, not needed to write data to stdout // 
+		if (req.method == "POST")
+		{
+			const std::string &body = req.body;
+			if (!body.empty())
+			{
+				if (write_all(pipe_stdin[1], body.c_str(), body.size()) == -1) // if post method, write data all to stdin // 
+				{
+					perror("Write to CGI stdin failed");
+					kill(pid, SIGKILL); // if failure, kill off the child and close all the pipes and free cgi_envp memory // 
+					close(pipe_stdin[1]);
+					close(pipe_stdout[0]);
+					free_envp(cgi_envp);
+					return (-1);
+				}
+			}
+		}
+		close(pipe_stdin[1]); // once data is written to stdin pipe, close off the pipe since no longer used // 
+		int epfd = epoll_create1(0); // create a new epoll fd to monitor events relating to pipe_stdout // 
+		if (epfd == -1)
+		{
+			perror("epoll_create1");
+			// Cleanup and return error
+			return (-1);
+		}
+		
+		// Add pipe_stdout[0] to epoll instance with edge-triggered read monitoring
+		struct epoll_event event = {};
+		event.events = EPOLLIN | EPOLLET; // READ flag and changes state when there are events to be read // 
+		event.data.fd = pipe_stdout[0]; // fd to be monitored is pipe_stdout // 
+		if (epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_stdout[0], &event) == -1) // add to epoll // 
+		{
+			perror("epoll_ctl ADD pipe_stdout");
+			close(epfd);
+			return (-1);
+		}
+		
+		// Set pipe_stdout[0] to non-blocking to properly use edge-triggered epoll
+		int flags = fcntl(pipe_stdout[0], F_GETFL, 0); // file access mode and status flags//
+		fcntl(pipe_stdout[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
+		
+		std::string cgi_output;
+		const int TIMEOUT_MS = 3000; // 3 seconds timeout
+		bool done = false;
+		bool timeout_occurred = false;
+		while (!done)
+		{
+			struct epoll_event events[1];
+			int nfds = epoll_wait(epfd, events, 1, TIMEOUT_MS);
+			
+			if (nfds == 0) // timeout
+			{
+				std::cerr << "Timeout waiting for CGI output. Killing child process." << std::endl;
+				kill(pid, SIGKILL);
+				timeout_occurred = true;
+				break;
+			}
+			else if (nfds == -1) // error
+			{
+				if (errno == EINTR) // interrupted by signal, try again
+					continue; 
+				perror("epoll_wait");
+				break;
+			}
+			else
+			{
+				if (events[0].data.fd == pipe_stdout[0])
+				{
+					while (true)
+					{
+						char buf[BUFFER_SIZE];
+						ssize_t bytes_read = read(pipe_stdout[0], buf, sizeof(buf));
+						if (bytes_read == -1)
+						{
+							if (errno == EAGAIN || errno == EWOULDBLOCK)
+							{
+								// No more data for now
+								break;
+							}
+							else
+							{
+								perror("read from CGI stdout");
+								done = true;
+								break;
+							}
+						}
+						else if (bytes_read == 0)
+						{
+							// EOF - pipe closed by child
+							done = true;
+							break;
+						}
+						else
+						{
+							cgi_output.append(buf, bytes_read);
+						}
+					}
+				}
+			}
+		}
+		close(pipe_stdout[0]); // close pipe_stdout once data is read //
+		close(epfd); // close epoll fd as well //
+		
+		if (!timeout_occurred) // if timeout has not occured, we monitor the status flags // 
+		{
+			int status;
+			waitpid(pid, &status, 0);
+		}
+		free_envp(cgi_envp);
+		// Use cgi_output as the CGI script response content
+		std::cout << "Parent received:\n" << cgi_output << std::endl;
+	}
+}
 
 // int	main(int ac, char **av, char **envp)
 // {
@@ -140,7 +387,7 @@ ssize_t	write_all(int fd, const char *buf, size_t size) // making sure no partia
 // 	env_map["REQUEST_METHOD"] = "DELETE";
 // 	env_map["QUERY_STRING"] = "name=alice&age=25";
 // 	env_map["CONTENT_LENGTH"] = "20";
-// 	env_map["CONTENT_TYPE"] = "text/html";
+// 	env_map[o"CONTENT_TYPE"] = "text/html";
 // 	env_map["SCRIPT_NAME"] = "/cgi-bin/test.cgi";
 // 	env_map["SERVER_PORT"] = "8080";
 // 	env_map["SERVER_PROTOCOL"] = "HTTP/1.1";
@@ -181,7 +428,7 @@ ssize_t	write_all(int fd, const char *buf, size_t size) // making sure no partia
 		
 // 		// creating paths to do execve //
 // 		const char *cgi_path = "/home/apoh/Documents/test/webserv/cgi-bin/my_cgi.cgi";
-// 		char	*argv[] = {const_cast<char*>(cgi_path), NULL}; // need to cast to this format because execve requires a particular type to run execve //
+// 		 char	*argv[] = {const_cast<char*>(cgi_path), NULL}; // need to cast to this format because execve requires a particular type to run execve //
 		
 // 		// might not be important. I was testing something earlier on //
 // 		/*std::vector<std::string> argv_vec;
@@ -213,12 +460,12 @@ ssize_t	write_all(int fd, const char *buf, size_t size) // making sure no partia
 // 			write(STDOUT_FILENO, buf_child, bytes_read_child);
 // 		}*/ // another example //
 // 	}
-// 	else // parent //
+// 	else // parent /i/
 // 	{
 // 		// so parent writes to stdin pipe and reads from stdout pipe //
 // 		close(pipe_stdin[0]); // in the parent, we dont need the read end from stdin //  
 // 		close(pipe_stdout[1]); // in the parent, we dont need the write end from stdout //
-		
+
 // 		const char *msg = "Hello from Parent!\n";
 // 		if (write_all(pipe_stdin[1], msg, ft_strlen(msg)) == -1) // if writing failed, we kill off the child process, the pipes, and free off memory // 
 // 		{

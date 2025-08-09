@@ -24,6 +24,8 @@ public:
 	Network&	operator=(const Network& other);
 	~Network();
 	int		getFd() const;
+	std::string	getHost() const;
+	std::string	getPort() const;
 	void	setupListener();
 };
 

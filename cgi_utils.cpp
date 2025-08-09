@@ -12,9 +12,9 @@
 
 #include "cgi_utils.hpp"
 
-bool	is_forbidden(const std::string &path) // Error 403 Forbidden //
+bool is_forbidden(const std::string &path) // Error 403 Forbidden //
 {
-	int	fd = open(path.c_str(), O_RDONLY);
+	int fd = open(path.c_str(), O_RDONLY);
 	if (fd == -1)
 	{
 		if (errno == EACCES) // EACCES means permission denied //
@@ -25,9 +25,9 @@ bool	is_forbidden(const std::string &path) // Error 403 Forbidden //
 	return (false);
 }
 
-bool	is_not_found(const std::string &path) // Error 404 not found //
+bool is_not_found(const std::string &path) // Error 404 not found //
 {
-	int	fd = open(path.c_str(), O_RDONLY);
+	int fd = open(path.c_str(), O_RDONLY);
 	if (fd == -1)
 	{
 		if (errno == ENOENT) // ENOENT means no such file //
@@ -46,7 +46,7 @@ std::string read_file(const std::string &filepath)
 	return ss.str(); // returns content to a string // 
 }
 
-void	send_error_response(int status_code, const std::string &status_text,
+void send_error_response(int status_code, const std::string &status_text,
 		const std::string &error_file,
 		const std::vector<std::string> &allow_methods)
 {
@@ -69,13 +69,13 @@ void	send_error_response(int status_code, const std::string &status_text,
 	std::cout << error_content; // print out the content of the error for debugging //
 }
 
-bool	is_method_allowed(const std::string &method, const std::vector<std::string> &allowed_methods) // check whether it belongs to GET, POST, DELETE // 
+bool is_method_allowed(const std::string &method, const std::vector<std::string> &allowed_methods) // check whether it belongs to GET, POST, DELETE // 
 {
 	return std::find(allowed_methods.begin(), allowed_methods.end(), method)
 		!= allowed_methods.end();
 }
 
-void	send_successful_response(const std::string &file_path, const std::string &content_type) // haven used this function yet but should be useful // 
+void send_successful_response(const std::string &file_path, const std::string &content_type) // haven used this function yet but should be useful // 
 {
 	std::string file_content = read_file(file_path); // Implement this to read the file into a string
 	std::cout << "HTTP/1.1 200 OK\r\n";

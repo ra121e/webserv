@@ -41,6 +41,16 @@ int	Network::getFd() const
 	return socket_fd;
 }
 
+std::string	Network::getHost() const
+{
+	return host;
+}
+
+std::string	Network::getPort() const
+{
+	return port;
+}
+
 void	Network::setupListener()
 {
 	struct addrinfo	hints = {};
