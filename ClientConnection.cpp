@@ -3,17 +3,19 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/10 20:29:36 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/10 22:12:15 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ClientConnection.hpp"
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
+#include <cstddef>
 #include <cstring>
+#include <ios>
 #include <netdb.h>
 #include <stdexcept>
 #include <string>
@@ -146,9 +148,9 @@ bool	ClientConnection::parseRequest()
 		request.headers[key] = value;
 	}
 
-	buffer.erase(0, end_pos + 4);
+	buffer.erase(0, pos + 4);
 	// body part
-	std::map<std::string, std::string>::iterator it = request.headers.find("content-length");
+	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
 	if (it == request.headers.end())
 	{
 		request.is_parse_complete = true;
@@ -166,7 +168,26 @@ bool	ClientConnection::parseRequest()
 		{
 			request.body = buffer.substr(0, content_length);
 			request.is_parse_complete = true;
-			return (true);
+			size_t	filename_start_pos = request.body.find("filename=\"");
+			size_t	filename_end_pos = request.body.find("\"", filename_start_pos + 10);
+			if (filename_start_pos != std::string::npos && filename_end_pos != std::string::npos)
+			{
+				std::string	filename = request.body.substr(filename_start_pos + 10, filename_end_pos - filename_start_pos - 10);
+				std::ofstream	file(("tmp/" + filename).c_str(), std::ios::binary);
+				if (!file)
+				{
+					throw std::ios::failure("Error opening file: " + filename);
+				}
+				size_t	body_start_pos = request.body.find("\r\n\r\n");
+				size_t	body_end_pos = request.body.find("\r\n", body_start_pos + 4);
+				file << request.body.substr(body_start_pos + 4, body_end_pos - body_start_pos - 4);
+				file.close();
+				return (true);
+			}
+			else
+			{
+				throw std::runtime_error("Filename not found in request body");
+			}
 		}
 		else
 			return (false);
