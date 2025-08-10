@@ -62,6 +62,28 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
+Location	*Server::getLocation(std::string const &uri)
+{
+	Location	*match = NULL;
+	size_t		longest = 0;
+
+	std::cout << "uri: " << uri << std::endl;
+
+	for (std::map<std::string, Location>::iterator it = locations.begin(); it != locations.end(); ++it)
+	{
+		const std::string	&path = it->first;
+
+		std::cout << "Location: " << it->first << " " << it->second.getAlias() << std::endl;
+		if (uri.find(path) == 0 && path.length() > longest)
+		{
+			match = &it->second;
+			longest = path.length();
+			std::cout << "Match is: " << it->first << match->getIndex() << std::endl;
+		}
+	}
+	return (match);
+}
+
 void	Server::setup()
 {
 	for (std::vector<Network*>::iterator it = networks.begin(); it != networks.end(); ++it)

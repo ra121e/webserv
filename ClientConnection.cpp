@@ -6,7 +6,7 @@
 /*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/09 22:03:50 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/10 13:16:19 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -175,17 +175,62 @@ bool	ClientConnection::parseRequest()
 
 void	ClientConnection::makeResponse()
 {
-	if (request.method == "GET" && request.uri == "/")
+	Location	*loc = server->getLocation(request.uri);
+	std::cout << "match location: " << loc->getIndex() << std::endl;
+	if (!loc)
 	{
-		response.setBody("<h1>Hello, 42World!</h1>", "text/html");
-	}
-	else
-	{
+		std::cout << "here in !loc: " << loc->getIndex() << std::endl;
 		response.status_code = 404;
 		response.status_message = "Not Found";
 		response.setBody("<h1>404 Not Found</h1>", "text/html");
+		res_buffer = response.makeString();
+		return ;
 	}
+	if (!loc->isMethod(request.method))
+	{
+		response.status_code = 405;
+		response.status_message = "Method Not Allowed";
+		response.setBody("<h1>405 Method Not Allowed</h1>", "text/html");
+		res_buffer = response.makeString();
+		return ;
+	}
+
+	std::string	filepath;
+	if (loc->isAutoindexOn())
+		filepath = loc->getAlias() + loc->getIndex();
+	else
+		filepath = loc->getAlias() + request.uri;
+
+	std::cout << "file path is " << filepath << std::endl;
+
+	std::ifstream	file(filepath.c_str(), std::ios::binary);
+	if (!file)
+	{
+		std::cout << "here in !file: " << loc->getIndex() << std::endl;
+		response.status_code = 404;
+		response.status_message = "Not Found";
+		response.setBody("<h1>404 Not Found</h1>", "text/html");
+		res_buffer = response.makeString();
+		return ;
+	}
+
+	std::stringstream	ss;
+	ss << file.rdbuf();
+	response.status_code = 200;
+	response.status_message = "OK";
+	response.setBody(ss.str(), "text/html");
 	res_buffer = response.makeString();
+
+//	if (request.method == "GET" && request.uri == "/")
+//	{
+//		response.setBody("<h1>Hello, 42World!</h1>", "text/html");
+//	}
+//	else
+//	{
+//		response.status_code = 404;
+//		response.status_message = "Not Found";
+//		response.setBody("<h1>404 Not Found</h1>", "text/html");
+//	}
 }
 
 bool	ClientConnection::sendResponse()

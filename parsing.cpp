@@ -4,7 +4,7 @@
 static void	parse_route_methods(std::istringstream& iss, Location& route)
 {
 	std::string	word;
-	
+
 	while (iss >> word)
 	{
 		if (word == "GET" || word == "POST" || word == "DELETE")
@@ -40,7 +40,8 @@ static bool	parse_route_attributes(const std::string& line, Location& route)
 		{
 			if (!(iss >> word))
 				throw std::ios_base::failure("Error: no index provided");
-			route.setAlias(word);
+//			route.setAlias(word);
+			route.setIndex(word);
 		}
 		else if (word == "}")
 			return false;
@@ -65,7 +66,7 @@ static void	parse_route(std::ifstream& infile, std::istringstream& ss, Server& s
 		while (std::getline(infile, line))
 		{
 			if (!parse_route_attributes(line, route))
-				break;	
+				break;
 		}
 		serv.addLocation(path, route);
 	}
@@ -103,7 +104,7 @@ static void	parse_error_pages(std::ifstream& infile, std::istringstream& ss, Ser
 		while (std::getline(infile, line))
 		{
 			if (!parse_single_error_page(serv, line))
-				break;	
+				break;
 		}
 	}
 	else

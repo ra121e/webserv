@@ -27,3 +27,28 @@ void	Location::setIndex(const std::string& _index)
 {
 	index = _index;
 }
+
+bool	Location::isMethod(std::string const &method) const
+{
+	for (size_t i = 0; i < methods.size(); ++i)
+	{
+		if (methods[i] == method)
+			return (true);
+	}
+	return (false);
+}
+
+bool	Location::isAutoindexOn() const
+{
+	return (autoindex);
+}
+
+const std::string	&Location::getAlias() const
+{
+	return (alias);
+}
+
+const std::string	&Location::getIndex() const
+{
+	return (index);
+}
