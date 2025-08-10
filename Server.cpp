@@ -62,7 +62,7 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
-Location	*Server::getLocation(std::string const &uri)
+std::pair<Location*, size_t>	Server::getLocation(std::string const &uri)
 {
 	Location	*match = NULL;
 	size_t		longest = 0;
@@ -81,7 +81,7 @@ Location	*Server::getLocation(std::string const &uri)
 			std::cout << "Match is: " << it->first << match->getIndex() << std::endl;
 		}
 	}
-	return (match);
+	return (std::make_pair(match, longest));
 }
 
 void	Server::setup()

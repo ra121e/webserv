@@ -6,7 +6,7 @@
 /*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/10 13:16:19 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/10 20:29:36 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -175,7 +175,9 @@ bool	ClientConnection::parseRequest()
 
 void	ClientConnection::makeResponse()
 {
-	Location	*loc = server->getLocation(request.uri);
+//	Location	*loc = server->getLocation(request.uri);
+	std::pair<Location*, size_t>	match = server->getLocation(request.uri);
+	Location *loc = match.first;
 	std::cout << "match location: " << loc->getIndex() << std::endl;
 	if (!loc)
 	{
@@ -196,10 +198,10 @@ void	ClientConnection::makeResponse()
 	}
 
 	std::string	filepath;
-	if (loc->isAutoindexOn())
-		filepath = loc->getAlias() + loc->getIndex();
+	if (!loc->getAlias().empty())
+		filepath = loc->getAlias() + request.uri.substr(match.second);
 	else
-		filepath = loc->getAlias() + request.uri;
+		filepath = request.uri;
 
 	std::cout << "file path is " << filepath << std::endl;
 
