@@ -100,6 +100,11 @@ std::string ClientConnection::getHost() const
 	return std::string(host);
 }
 
+Server	*ClientConnection::getServer() const
+{
+	return (server);
+}
+
 void	ClientConnection::appendToBuffer(char const *data, size_t size)
 {
 	buffer.append(data, size);
@@ -194,6 +199,50 @@ bool	ClientConnection::parseRequest()
 	}
 }
 
+std::string	ClientConnection::readFileContent(const std::string &path) const
+{
+	std::ifstream file(path.c_str());
+	if (!file)
+		return "<h1>Could not open " + path + "</h1>";
+	std::stringstream ss;
+	ss << file.rdbuf();
+	return ss.str();
+}
+
+void	ClientConnection::sendErrorResponse(int status_code,
+					const std::string &status_text,
+					const std::string &error_file,
+					const std::vector<std::string> &allow_methods)
+{
+	// Load HTML content from disk
+	std::string content = readFileContent(error_file);
+	
+	// Set HTTP status
+	response.status_code = status_code;
+	response.status_message = status_text;
+	
+	// Body and content type
+	response.setBody(content, "text/html");
+	
+	// Optionally add Allow header (for 405 Method Not Allowed)
+	if (!allow_methods.empty())
+	{
+		std::string allow;
+		std::vector<std::string>::const_iterator it = allow_methods.begin();
+		while (it != allow_methods.end())
+		{
+			allow += *it;
+			++it;
+			if (it != allow_methods.end())
+				allow += ", ";
+		}
+		response.addHeader("Allow", allow);
+	}
+	// Finalize response into the buffer that will be written to the socket
+	res_buffer = response.makeString();
+}
+
+
 void	ClientConnection::makeResponse()
 {
 //	Location	*loc = server->getLocation(request.uri);
@@ -202,19 +251,14 @@ void	ClientConnection::makeResponse()
 	std::cout << "match location: " << loc->getIndex() << std::endl;
 	if (!loc)
 	{
-		std::cout << "here in !loc: " << loc->getIndex() << std::endl;
-		response.status_code = 404;
-		response.status_message = "Not Found";
-		response.setBody("<h1>404 Not Found</h1>", "text/html");
-		res_buffer = response.makeString();
+		sendErrorResponse(404, "Not Found", server->getErrorPage(404),
+				std::vector<std::string>());
 		return ;
 	}
 	if (!loc->isMethod(request.method))
 	{
-		response.status_code = 405;
-		response.status_message = "Method Not Allowed";
-		response.setBody("<h1>405 Method Not Allowed</h1>", "text/html");
-		res_buffer = response.makeString();
+		sendErrorResponse(405, "Not Found", server->getErrorPage(405),
+				std::vector<std::string>());
 		return ;
 	}
 
@@ -229,11 +273,8 @@ void	ClientConnection::makeResponse()
 	std::ifstream	file(filepath.c_str(), std::ios::binary);
 	if (!file)
 	{
-		std::cout << "here in !file: " << loc->getIndex() << std::endl;
-		response.status_code = 404;
-		response.status_message = "Not Found";
-		response.setBody("<h1>404 Not Found</h1>", "text/html");
-		res_buffer = response.makeString();
+		sendErrorResponse(404, "Not Found", server->getErrorPage(404),
+				std::vector<std::string>());
 		return ;
 	}
 

@@ -36,6 +36,7 @@ class ClientConnection
 		const HttpResponse	&getResponse() const;
 		const std::string	&getResponseBuffer() const;
 		std::string getHost() const;
+		Server	*getServer() const;
 
 		void	appendToBuffer(char const *data, size_t size);
 		bool	parseRequest();
@@ -53,6 +54,12 @@ class ClientConnection
 		std::string			res_buffer;
 		HttpRequest			request;
 		HttpResponse		response;
+		
+		std::string       readFileContent(const std::string &path) const;
+		void              sendErrorResponse(int status_code,
+                                        const std::string &status_text,
+                                        const std::string &error_file,
+                                        const std::vector<std::string> &allow_methods);
 };
 
 

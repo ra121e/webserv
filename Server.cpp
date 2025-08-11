@@ -96,3 +96,16 @@ const std::vector<Network*>&	Server::getNetworks() const
 {
 	return networks;
 }
+
+std::string Server::getErrorPage(int code) const
+{
+	std::ostringstream oss;
+	oss << code;
+	std::string codeStr = oss.str();
+	std::map<std::string, std::string>::const_iterator it = error_pages.find(codeStr);
+	if (it != error_pages.end())
+	{
+		return it->second;
+	}
+	return "";
+}

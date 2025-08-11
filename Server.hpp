@@ -30,7 +30,7 @@ public:
 	std::pair<Location*, size_t>	getLocation(std::string const &uri);
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;
-
+	std::string getErrorPage(int code) const;
 };
 
 #endif
