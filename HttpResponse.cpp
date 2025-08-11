@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HttpResponse.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/08 09:02:49 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 16:49:26 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/11 18:42:22 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 #include <sstream>
 
 HttpResponse::HttpResponse():
-	status_code(200),
+	status_code(OK),
 	status_message("OK")
 {}
 

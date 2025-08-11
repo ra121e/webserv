@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   HttpResponse.hpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/07 20:58:04 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/08 16:47:51 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/11 18:44:02 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,8 @@
 
 class HttpResponse
 {
+	private:
+		static const int OK = 200;
 	public:
 		int									status_code;
 		std::string							status_message;

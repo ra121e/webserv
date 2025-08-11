@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/09 22:02:46 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/11 21:26:13 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 # include "Server.hpp"
 #include <netdb.h>
 #include <netinet/in.h>
+#include <string>
 #include <sys/socket.h>
 
 class ClientConnection
@@ -54,6 +55,11 @@ class ClientConnection
 		std::string			res_buffer;
 		HttpRequest			request;
 		HttpResponse		response;
+		static const int OK = 200;
+		static const int BAD_REQUEST = 400;
+		static const int RESOURCE_NOT_FOUND = 404;
+		static const int METHOD_NOT_ALLOWED = 405;
+		static const int INTERNAL_SERVER_ERROR = 500;
 		
 		std::string       readFileContent(const std::string &path) const;
 		void              sendErrorResponse(int status_code,

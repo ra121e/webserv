@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <utility>
 #include <vector>
 #include <map>
 #include <iostream>
@@ -17,6 +18,7 @@ private:
 	uint64_t							client_max_body_size;
 	std::map<std::string, std::string>	error_pages;
 	std::map<std::string, Location>		locations;
+	
 public:
 	Server();
 	Server(const Server& other);

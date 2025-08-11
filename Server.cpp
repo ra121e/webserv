@@ -1,9 +1,12 @@
 #include "Server.hpp"
 #include <cerrno>
+#include <cstddef>
 #include <cstring>
 #include <netdb.h>
 #include <stdexcept>
+#include <string>
 #include <sys/socket.h>
+#include <utility>
 #include <vector>
 #include <fcntl.h>
 
@@ -64,12 +67,23 @@ void	Server::addLocation(const std::string& path, const Location& location)
 
 const Location&	Server::getLocation(std::string const &uri) const
 {
-	std::map<std::string, Location>::const_iterator it = locations.find(uri);
-	if (it == locations.end())
+	for (std::map<std::string, Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
 	{
-		throw std::runtime_error("Location not found");
+		const std::string& path = it->first;
+		if (path[path.size() - 1] == '/' && path != "/")
+		{
+			size_t	final_slash_pos = uri.rfind("/");
+			if (path == uri.substr(0, final_slash_pos + 1))
+			{
+				return it->second;
+			}
+		}
+		else if (path == uri)
+		{
+			return it->second;
+		}
 	}
-	return it->second;
+	throw std::runtime_error("Location not found");
 }
 
 void	Server::setup()

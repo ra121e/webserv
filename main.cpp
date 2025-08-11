@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 18:17:52 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/11 18:43:15 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include <csignal>
 #include <exception>
 #include <cstring>
+#include <string>
 #include <sys/epoll.h>
 #include <vector>
 #include "TmpDirCleaner.hpp"

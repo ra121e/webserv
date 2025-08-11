@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/08/11 18:22:02 by cgoh             ###   ########.fr        #
+#    Updated: 2025/08/11 18:25:19 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -54,8 +54,6 @@ CXXFLAGS	=	-std=c++98 -Wall -Wextra -Werror -Wpedantic -MMD -MP -ggdb3 \
     -Wundef \
     -Wunused-macros \
     -Wuseless-cast \
-    -fanalyzer\
-	-Wno-analyzer-possible-null-argument
 
 CXX		=	c++
 

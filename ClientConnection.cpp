@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 17:23:15 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/11 21:36:41 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,10 @@
 #include <fcntl.h>
 #include <cerrno>
 #include <unistd.h>
+
+static const char* const	GET = "GET";
+static const char* const	POST = "POST";
+static const char* const	DELETE = "DELETE";
 
 ClientConnection::ClientConnection()
 {}
@@ -173,26 +177,7 @@ bool	ClientConnection::parseRequest()
 		{
 			request.body = buffer.substr(0, content_length);
 			request.is_parse_complete = true;
-			size_t	filename_start_pos = request.body.find("filename=\"");
-			size_t	filename_end_pos = request.body.find("\"", filename_start_pos + 10);
-			if (filename_start_pos != std::string::npos && filename_end_pos != std::string::npos)
-			{
-				std::string	filename = request.body.substr(filename_start_pos + 10, filename_end_pos - filename_start_pos - 10);
-				std::ofstream	file(("tmp/" + filename).c_str(), std::ios::binary);
-				if (!file)
-				{
-					throw std::ios::failure("Error opening file: " + filename);
-				}
-				size_t	body_start_pos = request.body.find("\r\n\r\n");
-				size_t	body_end_pos = request.body.find("\r\n", body_start_pos + 4);
-				file << request.body.substr(body_start_pos + 4, body_end_pos - body_start_pos - 4);
-				file.close();
-				return (true);
-			}
-			else
-			{
-				throw std::runtime_error("Filename not found in request body");
-			}
+			return true;
 		}
 		else
 			return (false);
@@ -224,7 +209,7 @@ void	ClientConnection::sendErrorResponse(int status_code,
 	// Body and content type
 	response.setBody(content, "text/html");
 	
-	// Optionally add Allow header (for 405 Method Not Allowed)
+	// Optionally add Allow header (for METHOD_NOT_ALLOWED Method Not Allowed)
 	if (!allow_methods.empty())
 	{
 		std::string allow;
@@ -247,14 +232,56 @@ void	ClientConnection::makeResponse()
 {
 	try
 	{
-		Location	loc = server->getLocation(request.uri);
+		const Location&	loc = server->getLocation(request.uri);
 		if (!loc.isMethod(request.method))
 		{
-			sendErrorResponse(405, "Method not allowed", server->getErrorPage(405),
+			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed", 
+				server->getErrorPage(METHOD_NOT_ALLOWED),
 					std::vector<std::string>());
 			return ;
 		}
+		if (request.method == POST)
+		{
+			size_t	filename_start_pos = request.body.find("filename=\"");
+			size_t	filename_end_pos = request.body.find("\"", filename_start_pos + 10);
+			if (filename_start_pos != std::string::npos && filename_end_pos != std::string::npos)
+			{
+				std::string	filename = request.body.substr(filename_start_pos + 10,
+					filename_end_pos - filename_start_pos - 10);
+				std::ofstream	file(("tmp/" + filename).c_str(), std::ios::binary);
+				if (!file)
+				{
+					sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
+						server->getErrorPage(INTERNAL_SERVER_ERROR),
+						std::vector<std::string>());
+					return;
+				}
+				size_t	body_start_pos = request.body.find("\r\n\r\n");
+				size_t	body_end_pos = request.body.find("\r\n", body_start_pos + 4);
+				file << request.body.substr(body_start_pos + 4, body_end_pos - body_start_pos - 4);
+			}
+			else
+			{
+				sendErrorResponse(BAD_REQUEST, "Bad Request",
+					server->getErrorPage(BAD_REQUEST),
+					std::vector<std::string>());
+				return;
+			}
+		}
+		else if (request.method == DELETE)
+		{
+			size_t	final_slash_pos = request.uri.rfind("/");
+			std::string filename = request.uri.substr(final_slash_pos + 1);
 
+			if (unlink(("tmp/" + filename).c_str()) == -1)
+			{
+				int code = errno == ENOENT ? RESOURCE_NOT_FOUND : INTERNAL_SERVER_ERROR;
+				sendErrorResponse(code, "Internal Server Error",
+					server->getErrorPage(code),
+					std::vector<std::string>());
+				return;
+			}
+		}
 		std::string	filepath = loc.getAlias() + loc.getIndex();
 
 		std::cout << "file path is " << filepath << std::endl;
@@ -262,14 +289,15 @@ void	ClientConnection::makeResponse()
 		std::ifstream	file(filepath.c_str(), std::ios::binary);
 		if (!file)
 		{
-			sendErrorResponse(404, "Not Found", server->getErrorPage(404),
-					std::vector<std::string>());
+			sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
+				server->getErrorPage(RESOURCE_NOT_FOUND),
+				std::vector<std::string>());
 			return ;
 		}
 
 		std::stringstream	ss;
 		ss << file.rdbuf();
-		response.status_code = 200;
+		response.status_code = OK;
 		response.status_message = "OK";
 		response.setBody(ss.str(), "text/html");
 		res_buffer = response.makeString();
@@ -277,21 +305,11 @@ void	ClientConnection::makeResponse()
 	catch (const std::runtime_error &e)
 	{
 		std::cerr << e.what() << "\n";
-		sendErrorResponse(404, "Not Found", server->getErrorPage(404),
+		sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found", 
+			server->getErrorPage(RESOURCE_NOT_FOUND),
 				std::vector<std::string>());
 		return ;
 	}
-
-//	if (request.method == "GET" && request.uri == "/")
-//	{
-//		response.setBody("<h1>Hello, 42World!</h1>", "text/html");
-//	}
-//	else
-//	{
-//		response.status_code = 404;
-//		response.status_message = "Not Found";
-//		response.setBody("<h1>404 Not Found</h1>", "text/html");
-//	}
 }
 
 bool	ClientConnection::sendResponse()
@@ -302,9 +320,7 @@ bool	ClientConnection::sendResponse()
 	ssize_t	n = write(getFd(), res_buffer.c_str(), res_buffer.size());
 	if (n == -1)
 	{
-		if (errno == EAGAIN)
-			return (false);
-		return (false);
+		return false;
 	}
 	res_buffer.erase(0, static_cast<size_t>(n));
 	return (res_buffer.empty());
