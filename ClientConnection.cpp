@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/10 22:12:15 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/11 17:23:15 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -245,45 +245,42 @@ void	ClientConnection::sendErrorResponse(int status_code,
 
 void	ClientConnection::makeResponse()
 {
-//	Location	*loc = server->getLocation(request.uri);
-	std::pair<Location*, size_t>	match = server->getLocation(request.uri);
-	Location *loc = match.first;
-	std::cout << "match location: " << loc->getIndex() << std::endl;
-	if (!loc)
+	try
 	{
+		Location	loc = server->getLocation(request.uri);
+		if (!loc.isMethod(request.method))
+		{
+			sendErrorResponse(405, "Method not allowed", server->getErrorPage(405),
+					std::vector<std::string>());
+			return ;
+		}
+
+		std::string	filepath = loc.getAlias() + loc.getIndex();
+
+		std::cout << "file path is " << filepath << std::endl;
+
+		std::ifstream	file(filepath.c_str(), std::ios::binary);
+		if (!file)
+		{
+			sendErrorResponse(404, "Not Found", server->getErrorPage(404),
+					std::vector<std::string>());
+			return ;
+		}
+
+		std::stringstream	ss;
+		ss << file.rdbuf();
+		response.status_code = 200;
+		response.status_message = "OK";
+		response.setBody(ss.str(), "text/html");
+		res_buffer = response.makeString();
+	}
+	catch (const std::runtime_error &e)
+	{
+		std::cerr << e.what() << "\n";
 		sendErrorResponse(404, "Not Found", server->getErrorPage(404),
 				std::vector<std::string>());
 		return ;
 	}
-	if (!loc->isMethod(request.method))
-	{
-		sendErrorResponse(405, "Not Found", server->getErrorPage(405),
-				std::vector<std::string>());
-		return ;
-	}
-
-	std::string	filepath;
-	if (!loc->getAlias().empty())
-		filepath = loc->getAlias() + request.uri.substr(match.second);
-	else
-		filepath = request.uri;
-
-	std::cout << "file path is " << filepath << std::endl;
-
-	std::ifstream	file(filepath.c_str(), std::ios::binary);
-	if (!file)
-	{
-		sendErrorResponse(404, "Not Found", server->getErrorPage(404),
-				std::vector<std::string>());
-		return ;
-	}
-
-	std::stringstream	ss;
-	ss << file.rdbuf();
-	response.status_code = 200;
-	response.status_message = "OK";
-	response.setBody(ss.str(), "text/html");
-	res_buffer = response.makeString();
 
 //	if (request.method == "GET" && request.uri == "/")
 //	{

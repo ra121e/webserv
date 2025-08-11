@@ -27,7 +27,7 @@ public:
 	void	addErrorPage(const std::string& error, const std::string& page);
 	void	addLocation(const std::string& path, const Location& location);
 //	Location	*getLocation(std::string const &uri);
-	std::pair<Location*, size_t>	getLocation(std::string const &uri);
+	const Location&	getLocation(std::string const &uri) const;
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;
 	std::string getErrorPage(int code) const;

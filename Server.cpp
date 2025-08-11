@@ -62,26 +62,14 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
-std::pair<Location*, size_t>	Server::getLocation(std::string const &uri)
+const Location&	Server::getLocation(std::string const &uri) const
 {
-	Location	*match = NULL;
-	size_t		longest = 0;
-
-	std::cout << "uri: " << uri << std::endl;
-
-	for (std::map<std::string, Location>::iterator it = locations.begin(); it != locations.end(); ++it)
+	std::map<std::string, Location>::const_iterator it = locations.find(uri);
+	if (it == locations.end())
 	{
-		const std::string	&path = it->first;
-
-		std::cout << "Location: " << it->first << " " << it->second.getAlias() << std::endl;
-		if (uri.find(path) == 0 && path.length() > longest)
-		{
-			match = &it->second;
-			longest = path.length();
-			std::cout << "Match is: " << it->first << match->getIndex() << std::endl;
-		}
+		throw std::runtime_error("Location not found");
 	}
-	return (std::make_pair(match, longest));
+	return it->second;
 }
 
 void	Server::setup()
