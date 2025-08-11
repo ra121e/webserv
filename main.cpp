@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/09 20:42:01 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/11 18:17:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,20 +14,24 @@
 #include <cerrno>
 #include <csignal>
 #include <exception>
-#include <stdexcept>
 #include <cstring>
 #include <sys/epoll.h>
 #include <vector>
+#include "TmpDirCleaner.hpp"
 
-static bool	g_run = true;
+// Signal-safe run flag
+static volatile sig_atomic_t g_run = 1;
 
-static void	handle_sigint(int)
+extern "C" void handle_sigint_c(int signum)
 {
-	g_run = false;
+	(void)signum;
+	g_run = 0;
 }
 
 int	main(int argc, char **argv)
 {
+	// Ensure tmp/ files are cleaned on exit (normal stop or exceptions)
+	TmpDirCleaner cleanupGuard("tmp");
 	Config	conf;
 
 	if (argc != 2)
@@ -47,8 +51,8 @@ int	main(int argc, char **argv)
 				epoll.addEventListener(*s_it, (*n_it)->getFd());
 			}
 		}
-		std::signal(SIGINT, handle_sigint);
-		while (g_run)
+		std::signal(SIGINT, handle_sigint_c);
+		while (g_run != 0)
 		{
 			epoll.handleEvents();
 		}
