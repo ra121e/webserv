@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:36:16 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/07 18:12:40 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/12 16:26:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,6 @@ class HttpRequest
 		std::string	body;
 
 		bool	is_header_parse;
-		bool	is_parse_complete;
 	private:
 
 };

@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 21:26:13 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/12 16:27:18 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,7 @@ class ClientConnection
 		Server	*getServer() const;
 
 		void	appendToBuffer(char const *data, size_t size);
-		bool	parseRequest();
+		void	parseRequest();
 		void	makeResponse();
 		bool	sendResponse();
 		void	retrieveHost();

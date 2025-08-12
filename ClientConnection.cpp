@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 21:36:41 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/12 17:45:12 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,74 +114,45 @@ void	ClientConnection::appendToBuffer(char const *data, size_t size)
 	buffer.append(data, size);
 }
 
-bool	ClientConnection::parseRequest()
+void	ClientConnection::parseRequest()
 {
-	if (request.is_parse_complete)
-		return (true);
-
-	size_t	pos	= buffer.find("\r\n\r\n");
-	if (pos == std::string::npos)
-		return (false);
+	size_t	header_end_pos	= buffer.find("\r\n\r\n");
 
 	// start all of header part(until new line)
-	std::stringstream	ss(buffer.substr(0, pos));
-	std::string			line;
+	std::string	header_string = buffer.substr(0, header_end_pos);
+	std::stringstream	ss(header_string);
 
 	// first line
-	std::getline(ss, line);
-	if (line.empty())
-		return false;
-
-	size_t	end_pos = line.find('\r');
-	if (end_pos != std::string::npos)
-		line.erase(end_pos);
-
-	std::stringstream	ss_requestline(line);
-	ss_requestline >> request.method >> request.uri >> request.version;
+	ss >> request.method >> request.uri >> request.version;
 	request.is_header_parse = true;
 
 	// header main part
-	while (std::getline(ss, line) && line != "\r")
+	size_t	request_line_end = header_string.find("\r\n");
+	header_string = header_string.substr(request_line_end + 2);
+	for (size_t pos = header_string.find("\r\n"); pos != std::string::npos; pos = header_string.find("\r\n"))
 	{
-		size_t	colon_pos = line.find(':');
-		if (colon_pos == std::string::npos)
-			return (false);
-
-		std::string	key = line.substr(0, colon_pos);
-		std::string value = line.substr(colon_pos + 2);
-
-		size_t	epos = line.find('\r');
-		if (epos != std::string::npos)
-			line.erase(epos);
-
-		request.headers[key] = value;
+		std::string header_line = header_string.substr(0, pos);
+		size_t	colon_pos = header_line.find(": ");
+		if (colon_pos != std::string::npos)
+		{
+			std::string	key = header_line.substr(0, colon_pos);
+			std::string	value = header_line.substr(colon_pos + 2); // skip ": "
+			request.headers[key] = value;
+		}
+		header_string.erase(0, pos + 2); // skip "\r\n"
 	}
 
-	buffer.erase(0, pos + 4);
+	if (request.method == GET || request.method == DELETE)
+	{
+		return;
+	}
+	
 	// body part
 	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
-	if (it == request.headers.end())
-	{
-		request.is_parse_complete = true;
-		return (true);
-	}
-	else
-	{
-		std::stringstream	ss_content_length(it->second);
-		size_t	content_length;
-		ss_content_length >> content_length;
-		if (ss_content_length.fail())
-			return (false);
-
-		if (buffer.size() >= content_length)
-		{
-			request.body = buffer.substr(0, content_length);
-			request.is_parse_complete = true;
-			return true;
-		}
-		else
-			return (false);
-	}
+	std::stringstream	ss_content_length(it->second);
+	size_t	content_length = 0;
+	ss_content_length >> content_length;
+	request.body = buffer.substr(header_end_pos + 4, content_length);
 }
 
 std::string	ClientConnection::readFileContent(const std::string &path) const

@@ -134,40 +134,24 @@ void	Epoll::handleEvents()
 					ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
 					if (bytes_read == -1)
 					{
-						// nothing to read now, keep connection, I will be back...
-						if (errno == EAGAIN)
-						{
-							break;
-						}
-						// something error happens
-						throw std::runtime_error(strerror(errno));
-					}
-					// read complete
-					if (bytes_read == 0)
-					{
-						delete client;
-						clients.erase(current_fd);
-						break ;
+						break;
 					}
 					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
-					// std::cout << "buffer: " << client->getBuffer() << std::endl;
-
-					if (client->parseRequest())
-					{
-						std::cout << client->getRequest().method << std::endl;
-						std::cout << client->getRequest().uri << std::endl;
-						std::cout << client->getRequest().version << std::endl;
-						std::map<std::string, std::string>::const_iterator it_tmp = client->getRequest().headers.begin();
-						for (; it_tmp != client->getRequest().headers.end(); ++it_tmp)
-							std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
-
-						client->makeResponse();
-						std::cout << "Response Ready! to FD: " << client->getFd() << std::endl;
-						std::cout << client->getResponseBuffer() << std::endl;
-
-						modifyEventListener(client);
-					}
 				}
+
+				client->parseRequest();
+				std::cout << client->getRequest().method << std::endl;
+				std::cout << client->getRequest().uri << std::endl;
+				std::cout << client->getRequest().version << std::endl;
+				std::map<std::string, std::string>::const_iterator it_tmp = client->getRequest().headers.begin();
+				for (; it_tmp != client->getRequest().headers.end(); ++it_tmp)
+					std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
+
+				client->makeResponse();
+				std::cout << "Response Ready! to FD: " << client->getFd() << std::endl;
+				std::cout << client->getResponseBuffer() << std::endl;
+
+				modifyEventListener(client);
 			}
 			else if (events[i].events & EPOLLOUT)
 			{
