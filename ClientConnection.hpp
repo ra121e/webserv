@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/12 16:27:18 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/12 20:21:00 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,12 +61,13 @@ class ClientConnection
 		static const int RESOURCE_NOT_FOUND = 404;
 		static const int METHOD_NOT_ALLOWED = 405;
 		static const int INTERNAL_SERVER_ERROR = 500;
-		
-		std::string       readFileContent(const std::string &path) const;
-		void              sendErrorResponse(int status_code,
+
+		std::string	readFileContent(const std::string &path) const;
+		void		sendErrorResponse(int status_code,
                                         const std::string &status_text,
                                         const std::string &error_file,
                                         const std::vector<std::string> &allow_methods);
+		std::string	makeIndexof(std::string const &path_dir, std::string const &uri);
 };
 
 

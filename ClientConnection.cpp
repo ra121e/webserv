@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/12 17:45:12 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/12 20:29:04 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,8 @@
 #include <fcntl.h>
 #include <cerrno>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 
 static const char* const	GET = "GET";
 static const char* const	POST = "POST";
@@ -146,7 +148,7 @@ void	ClientConnection::parseRequest()
 	{
 		return;
 	}
-	
+
 	// body part
 	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
 	std::stringstream	ss_content_length(it->second);
@@ -172,14 +174,14 @@ void	ClientConnection::sendErrorResponse(int status_code,
 {
 	// Load HTML content from disk
 	std::string content = readFileContent(error_file);
-	
+
 	// Set HTTP status
 	response.status_code = status_code;
 	response.status_message = status_text;
-	
+
 	// Body and content type
 	response.setBody(content, "text/html");
-	
+
 	// Optionally add Allow header (for METHOD_NOT_ALLOWED Method Not Allowed)
 	if (!allow_methods.empty())
 	{
@@ -198,6 +200,27 @@ void	ClientConnection::sendErrorResponse(int status_code,
 	res_buffer = response.makeString();
 }
 
+std::string	ClientConnection::makeIndexof(std::string const &path_dir, std::string const &uri)
+{
+	std::stringstream	html;
+	html << "<html><body><h1>Index of " << uri << "</h1>";
+
+	DIR	*dir = opendir(path_dir.c_str());
+	if (dir)
+	{
+		std::cout << "here in dir" << std::endl;
+		struct dirent	*ent;
+		while ((ent = readdir(dir)) != NULL)
+		{
+			std::cout << "in while loop to make list" << std::endl;
+//			html << "<a href=\"" << uri << ent->d_name << "\">" << ent->d_name << "</a><p>";
+			html << ent->d_name << "<p>";
+		}
+		closedir(dir);
+	}
+	html << "</body></html>";
+	return (html.str());
+}
 
 void	ClientConnection::makeResponse()
 {
@@ -208,7 +231,7 @@ void	ClientConnection::makeResponse()
 		std::cout << "Location resolved: " << loc.getAlias() << std::endl ;
 		if (!loc.isMethod(request.method))
 		{
-			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed", 
+			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed",
 				server->getErrorPage(METHOD_NOT_ALLOWED),
 					std::vector<std::string>());
 			return ;
@@ -274,28 +297,53 @@ void	ClientConnection::makeResponse()
 		}
 		std::string	filepath = loc.getAlias() + loc.getIndex();
 
-		std::cout << "file path is " << filepath << std::endl;
-
-		std::ifstream	file(filepath.c_str(), std::ios::binary);
-		if (!file)
+		struct stat file_stat;
+		if (stat(filepath.c_str(), &file_stat) == 0)
 		{
-			sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
-				server->getErrorPage(RESOURCE_NOT_FOUND),
-				std::vector<std::string>());
-			return ;
-		}
+			if (S_ISREG(file_stat.st_mode))
+			{
+				std::cout << "here in ISREG" << std::endl;
+				std::ifstream	file(filepath.c_str(), std::ios::binary);
+				if (!file)
+				{
+					sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
+						server->getErrorPage(RESOURCE_NOT_FOUND),
+						std::vector<std::string>());
+					return ;
+				}
 
-		std::stringstream	ss;
-		ss << file.rdbuf();
-		response.status_code = OK;
-		response.status_message = "OK";
-		response.setBody(ss.str(), "text/html");
-		res_buffer = response.makeString();
+				std::stringstream	ss;
+				ss << file.rdbuf();
+				response.status_code = OK;
+				response.status_message = "OK";
+				response.setBody(ss.str(), "text/html");
+				res_buffer = response.makeString();
+			}
+			else if (S_ISDIR(file_stat.st_mode))
+			{
+				std::cout << "here in ISDIR" << std::endl;
+				if (loc.isAutoindexOn())
+				{
+					std::cout << "here in autoindexOn" << std::endl;
+					response.status_code = OK;
+					response.status_message = "OK";
+					response.setBody(makeIndexof(filepath, request.uri), "text/html");
+					res_buffer = response.makeString();
+				}
+				else
+				{
+					sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
+						server->getErrorPage(RESOURCE_NOT_FOUND),
+						std::vector<std::string>());
+					return ;
+				}
+			}
+		}
 	}
 	catch (const std::runtime_error &e)
 	{
 		std::cerr << e.what() << "\n";
-		sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found", 
+		sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
 			server->getErrorPage(RESOURCE_NOT_FOUND),
 				std::vector<std::string>());
 		return ;
