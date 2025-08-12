@@ -67,7 +67,7 @@ int	main(int ac, char **av, char **envp)
 {
 	(void)ac;
 	(void)av;
-	sleep(10); // this is to stimulate timeout for handler // 
+	// this is to stimulate timeout for handler // 
 	std::vector<std::string> allowed_methods; // create a vector to hold allowed methods // 
 	allowed_methods.push_back("GET");
 	allowed_methods.push_back("POST");

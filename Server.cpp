@@ -13,7 +13,7 @@
 Server::Server()
 {
 	Location cgiLoc;
-	cgiLoc.setAlias("/home/apoh/Documents/sample4/cgi-bin/"); // actual disk path to CGI scripts
+	cgiLoc.setAlias("cgi-bin/"); // actual disk path to CGI scripts
 	cgiLoc.addMethod("GET");
 	cgiLoc.addMethod("POST");
 	cgiLoc.addMethod("DELETE");
