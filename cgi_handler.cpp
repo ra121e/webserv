@@ -185,22 +185,19 @@ std::string getReferer(const std::map<std::string, std::string> &headers) // und
 	return "";
 }
 
-// std::string getPathInfo(const std::string &uri, const std::string &script_path) // this might be used, this might not be used, leave it first. Gives you additional info after the path directory //
-// {
-// 	std::size_t pos = uri.find('?'); 
-// 	std::string path;
-// 	if (pos == std::string::npos)
-// 		path = uri;
-// 	else
-// 		path = uri.substr(0, pos);
-// 	if (path.compare(0, script_path.length(), script_path) == 0)
-// 		return path.substr(script_path.length());
-// 	return "";
-// }
+std::string getPathInfo(const std::string &script_path)
+{
+	std::cout << "script_path: " << script_path << std::endl;
+	std::string new_str = script_path;
+	size_t pos = new_str.find('?');
+	if (pos != std::string::npos)
+		new_str.erase(pos);
+	std::cout << "new_str: " << new_str << std::endl;
+	return (new_str);
+}
 
 int run_cgi_script(ClientConnection &client, const std::string &script_path, const Network &network) // this is the main logic i take over from the main, we are to implement this in our main function // 
 {
-	(void)script_path;
 	int pipe_stdin[2]; // creating one pipe for stdin //
 	int pipe_stdout[2]; // creating one pipe for stdout so the child process can process // 
 	
@@ -221,7 +218,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 	env_map["HTTP_COOKIE"] = getCookie(req.headers);
 	env_map["HTTP_REFERER"] = getReferer(req.headers);
 	env_map["GATEWAY_INTERFACE"] = "CGI/1.1";
-	// env_map["PATH_INFO"] = getPathInfo(req.uri);
+	env_map["PATH_INFO"] = getPathInfo(script_path);
 	
 	char	**cgi_envp = map_to_envp(env_map); // function to copy all the env_map variables into a environment so that i can run execve // 
 	if (cgi_envp == NULL)
@@ -252,11 +249,11 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 		}
 		close(pipe_stdin[1]); // close if dup2 successful //
 		close(pipe_stdout[0]); // close if dup2 successful // 
-		const char *cgi_path = "/home/apoh/Documents/test/webserv/cgi-bin/my_cgi.cgi"; // location of my cgi script // 
-		char	*argv[] = {const_cast<char*>(cgi_path), NULL}; // construction of argv, exceve requires argv to be of a certain prototype, hence need to cast // 
+		const char *cgi_path = env_map["PATH_INFO"].c_str(); // location of my cgi script // 
+		char	*argv[] = {const_cast<char*>(cgi_path), NULL}; // construction of argv, exceve requires argv to be of a certain prototype, hence need to cast //
 		execve(cgi_path, argv, cgi_envp);
  		perror("execve failed"); // if execve failed // 
- 		exit(EXIT_FAILURE); // exit if fail // 
+ 		exit(EXIT_FAILURE); // exit if fail // */
 	}
 	else
 	{

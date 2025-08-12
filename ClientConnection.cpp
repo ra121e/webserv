@@ -203,7 +203,9 @@ void	ClientConnection::makeResponse()
 {
 	try
 	{
+		std::cout << "Looking up location for : " << request.uri << std::endl;
 		const Location&	loc = server->getLocation(request.uri);
+		std::cout << "Location resolved: " << loc.getAlias() << std::endl ;
 		if (!loc.isMethod(request.method))
 		{
 			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed", 
@@ -211,7 +213,24 @@ void	ClientConnection::makeResponse()
 					std::vector<std::string>());
 			return ;
 		}
-		if (request.method == POST)
+		if (is_cgi_script(request.uri))
+		{
+			std::cout << "getAlias : " << loc.getAlias() << std::endl;
+			std::cout << "getUri : " << request.uri << std::endl;
+			std::string uri_path = request.uri;
+			if (uri_path.rfind("/cgi-bin/", 0) == 0)
+				uri_path = uri_path.substr(9);
+			std::cout << "uriPath : " << uri_path << std::endl;
+			std::string script_path = loc.getAlias() + uri_path;
+			std::cout << "script_path" << script_path << std::endl;
+			int	ret = run_cgi_script(*this, script_path, *(getServer()->getNetworks()[0]));
+			if (ret != 0)
+				sendErrorResponse(INTERNAL_SERVER_ERROR, "CGI Excecution failed",
+					server->getErrorPage(INTERNAL_SERVER_ERROR),
+					std::vector<std::string>());
+			return ;
+		}
+		else if (request.method == POST)
 		{
 			size_t	filename_start_pos = request.body.find("filename=\"");
 			size_t	filename_end_pos = request.body.find("\"", filename_start_pos + 10);

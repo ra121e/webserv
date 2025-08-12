@@ -15,6 +15,7 @@
 
 # include "HttpRequest.hpp"
 # include "HttpResponse.hpp"
+# include "cgi_handler.hpp"
 # include "Server.hpp"
 #include <netdb.h>
 #include <netinet/in.h>

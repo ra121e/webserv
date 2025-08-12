@@ -13,8 +13,7 @@
 #include "HttpRequest.hpp"
 
 HttpRequest::HttpRequest():
-	is_header_parse(false),
-	is_parse_complete(false)
+	is_header_parse(false)
 {}
 
 HttpRequest::HttpRequest(HttpRequest const &other):
@@ -23,8 +22,7 @@ HttpRequest::HttpRequest(HttpRequest const &other):
 	version(other.version),
 	headers(other.headers),
 	body(other.body),
-	is_header_parse(other.is_header_parse),
-	is_parse_complete(other.is_parse_complete)
+	is_header_parse(other.is_header_parse)
 {}
 
 HttpRequest	&HttpRequest::operator=(HttpRequest const &other)
@@ -37,7 +35,6 @@ HttpRequest	&HttpRequest::operator=(HttpRequest const &other)
 		this->headers = other.headers;
 		this->body = other.body;
 		this->is_header_parse = other.is_header_parse;
-		this->is_parse_complete = other.is_parse_complete;
 	}
 	return (*this);
 }

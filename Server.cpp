@@ -12,6 +12,12 @@
 
 Server::Server()
 {
+	Location cgiLoc;
+	cgiLoc.setAlias("/home/apoh/Documents/sample4/cgi-bin/"); // actual disk path to CGI scripts
+	cgiLoc.addMethod("GET");
+	cgiLoc.addMethod("POST");
+	cgiLoc.addMethod("DELETE");
+	locations["/cgi-bin/"] = cgiLoc;
 }
 
 Server::Server(const Server& other): client_max_body_size(other.client_max_body_size), error_pages(other.error_pages), locations(other.locations)
@@ -67,22 +73,34 @@ void	Server::addLocation(const std::string& path, const Location& location)
 
 const Location&	Server::getLocation(std::string const &uri) const
 {
+	std::string clean_uri = uri;
+	size_t pos = clean_uri.find('?');
+	if (pos != std::string::npos)
+		clean_uri.erase(pos);
+		
+	std::cout << "Original Uri: " << uri << std::endl;
+	std::cout << "Clean URI: " << clean_uri << std::endl;
+	
 	for (std::map<std::string, Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
 	{
+		std::cout << "it->first " << it->first << std::endl;
 		const std::string& path = it->first;
 		if (path[path.size() - 1] == '/' && path != "/")
 		{
-			size_t	final_slash_pos = uri.rfind("/");
-			if (path == uri.substr(0, final_slash_pos + 1))
+			size_t	final_slash_pos = clean_uri.rfind("/");
+			if (path == clean_uri.substr(0, final_slash_pos + 1))
 			{
 				return it->second;
 			}
 		}
-		else if (path == uri)
+		else if (path == clean_uri)
 		{
+			std::cout << "Location exact match: path=[" << path 
+              << "], uri=[" << clean_uri << "]" << std::endl;
 			return it->second;
 		}
 	}
+	std::cerr << "No Location match for URI: [" << uri << "]" << std::endl;
 	throw std::runtime_error("Location not found");
 }
 

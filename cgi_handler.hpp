@@ -21,6 +21,8 @@
 # include "Network.hpp"
 # include <sys/epoll.h>
 
+class ClientConnection;
+
 bool is_cgi_script(const std::string &path);
 int create_pipe(int fds[2]);
 size_t ft_strlen(const char *s);
@@ -37,6 +39,7 @@ std::string getScriptName(const std::string &uri);
 std::string getUserAgent(const std::map<std::string, std::string> &headers);
 std::string getCookie(const std::map<std::string, std::string> &headers);
 std::string getReferer(const std::map<std::string, std::string> &headers);
+std::string getPathInfo(const std::string &script_path);
 int run_cgi_script(ClientConnection &client, const std::string &script_path, const Network &network);
 
 #endif
