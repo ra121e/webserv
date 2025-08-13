@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 20:06:12 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 22:18:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,12 +56,17 @@ class ClientConnection
 		std::string			res_buffer;
 		HttpRequest			request;
 		HttpResponse		response;
-		static const int OK = 200;
-		static const int BAD_REQUEST = 400;
-		static const int RESOURCE_NOT_FOUND = 404;
-		static const int METHOD_NOT_ALLOWED = 405;
-		static const int PAYLOAD_TOO_LARGE = 413;
-		static const int INTERNAL_SERVER_ERROR = 500;
+		enum
+		{
+			OK = 200,
+			MOVED_PERMANENTLY = 301,
+			MOVED_TEMPORARILY = 302,
+			BAD_REQUEST = 400,
+			RESOURCE_NOT_FOUND = 404,
+			METHOD_NOT_ALLOWED = 405,
+			PAYLOAD_TOO_LARGE = 413,
+			INTERNAL_SERVER_ERROR = 500
+		} status_codes;
 
 		std::string	readFileContent(const std::string &path) const;
 		void		sendErrorResponse(int status_code,
@@ -69,6 +74,7 @@ class ClientConnection
                                         const std::string &error_file,
                                         const std::vector<std::string> &allow_methods);
 		std::string	makeIndexof(std::string const &path_dir, std::string const &uri);
+		static std::string	getFileExtension(const std::string& filepath);
 };
 
 

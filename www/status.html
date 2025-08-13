@@ -3,20 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>Server Status</title>
-    <link rel="stylesheet" href="style">
+        <link rel="stylesheet" href="/style">
 </head>
 <body>
 <header>
-    <h1>Server Status</h1>
-    <nav>
-        <a href="/">Home</a>
-        <a href="about">About</a>
-        <a href="status">Status</a>
-        <a href="upload">Upload/Delete</a>
-    </nav>
+    <div class="container header-inner">
+        <div class="brand"><span class="logo"></span>Server Status</div>
+        <nav>
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/status">Status</a>
+                <a href="/upload">Upload/Delete</a>
+                <a href="/uploads">Uploads</a>
+        </nav>
+    </div>
 </header>
 <main>
-    <p style="color:green; font-weight:bold;">✅ Server is running!</p>
+    <div class="page">
+        <div class="card">
+            <p style="color:#22c55e; font-weight:bold;">✅ Server is running!</p>
+        </div>
+    </div>
 </main>
 <footer>
     <p>&copy; 2025 My Web Server Project</p>

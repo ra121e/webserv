@@ -3,22 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <title>Welcome to My C++ Web Server</title>
-    <link rel="stylesheet" href="style">
+        <link rel="stylesheet" href="/style">
 </head>
 <body>
 <header>
-    <h1>🚀 C++ Web Server</h1>
-    <nav>
-        <a href="/">Home</a>
-        <a href="about">About</a>
-        <a href="status">Status</a>
-        <a href="upload">Upload/Delete</a>
-    </nav>
+    <div class="container header-inner">
+        <div class="brand"><span class="logo"></span>🚀 C++ Web Server</div>
+        <nav>
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/status">Status</a>
+                <a href="/upload">Upload/Delete</a>
+                <a href="/uploads">Uploads</a>
+        </nav>
+    </div>
 </header>
 <main>
-    <h2>Welcome!</h2>
-    <p>You are viewing this page served entirely by our C++ web server.</p>
-    <p>It supports static files, route aliases, and more!</p>
+    <div class="page">
+        <div class="card">
+            <h2>Welcome!</h2>
+            <p class="muted">You are viewing this page served entirely by our C++ web server.</p>
+            <p>It supports static files, route aliases, and more!</p>
+        </div>
+    </div>
 </main>
 <footer>
     <p>&copy; 2025 My Web Server Project</p>

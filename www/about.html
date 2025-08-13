@@ -3,26 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <title>About This Server</title>
-    <link rel="stylesheet" href="style">
+        <link rel="stylesheet" href="/style">
 </head>
 <body>
 <header>
-    <h1>About This Server</h1>
-    <nav>
-        <a href="/">Home</a>
-        <a href="about">About</a>
-        <a href="status">Status</a>
-        <a href="upload">Upload/Delete</a>
-    </nav>
+    <div class="container header-inner">
+        <div class="brand"><span class="logo"></span>About This Server</div>
+        <nav>
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/status">Status</a>
+                <a href="/upload">Upload/Delete</a>
+                <a href="/uploads">Uploads</a>
+        </nav>
+    </div>
 </header>
 <main>
-    <p>This lightweight C++ web server is capable of:</p>
-    <ul>
-        <li>Serving static files (HTML, CSS, JS, images)</li>
-        <li>Handling custom route aliases</li>
-        <li>Logging requests and errors</li>
-        <li>Fast and minimal resource usage</li>
-    </ul>
+    <div class="page">
+        <div class="card">
+            <p>This lightweight C++ web server is capable of:</p>
+            <ul>
+                    <li>Serving static files (HTML, CSS, JS, images)</li>
+                    <li>Handling custom route aliases</li>
+                    <li>Logging requests and errors</li>
+                    <li>Fast and minimal resource usage</li>
+            </ul>
+        </div>
+    </div>
 </main>
 <footer>
     <p>&copy; 2025 My Web Server Project</p>

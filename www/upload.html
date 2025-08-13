@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>File Upload & Delete Demo</title>
-    <link rel="stylesheet" href="style">
+    <link rel="stylesheet" href="/style">
     <style>
         main { max-width: 500px; margin: auto; }
         form, .delete-section { border: 1px solid #ccc; padding: 1em; margin-top: 1em; border-radius: 5px; background: white; }
@@ -14,13 +14,16 @@
 </head>
 <body>
 <header>
-    <h1>Upload & Delete Test</h1>
-    <nav>
-        <a href="/">Home</a>
-        <a href="about">About</a>
-        <a href="status">Status</a>
-        <a href="upload">Upload/Delete</a>
-    </nav>
+    <div class="container header-inner">
+        <div class="brand"><span class="logo"></span>Upload & Delete Test</div>
+        <nav>
+                <a href="/">Home</a>
+                <a href="/about">About</a>
+                <a href="/status">Status</a>
+                <a href="/upload">Upload/Delete</a>
+                <a href="/uploads">Uploads</a>
+        </nav>
+    </div>
 </header>
 
 <main>
@@ -75,7 +78,7 @@ document.getElementById("deleteButton").addEventListener("click", async function
 </script>
 
 <footer>
-    <p>&copy; 2025 My Web Server Project</p>
-</footer>
+        <p>&copy; 2025 My Web Server Project</p>
+    </footer>
 </body>
 </html>

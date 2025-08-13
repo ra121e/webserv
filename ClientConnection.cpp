@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 20:54:02 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/13 22:21:22 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -262,9 +262,9 @@ void	ClientConnection::makeResponse()
 		if (loc.getIsRedirect())
 		{
 			response.status_code = loc.getRedirectCode();
-			if (response.status_code == 301)
+			if (response.status_code == MOVED_PERMANENTLY)
 				response.status_message = "Moved Permanently";
-			else if (response.status_code == 302)
+			else if (response.status_code == MOVED_TEMPORARILY)
 				response.status_message = "Found";
 			else
 				response.status_message = "Redirect";
@@ -306,7 +306,7 @@ void	ClientConnection::makeResponse()
 					std::vector<std::string>());
 			return ;
 		}*/
-		else if (request.method == POST)
+		if (request.method == POST)
 		{
 			size_t	filename_start_pos = request.body.find("filename=\"");
 			size_t	filename_end_pos = request.body.find("\"", filename_start_pos + 10);
@@ -369,13 +369,27 @@ void	ClientConnection::makeResponse()
 				ss << file.rdbuf();
 				response.status_code = OK;
 				response.status_message = "OK";
-				response.setBody(ss.str(), "text/html");
+				std::string extension = getFileExtension(filepath);
+				std::string content_type = "application/octet-stream";
+				if (extension == "html")
+				{
+					content_type = "text/html";
+				}
+				else if (extension == "css")
+				{
+					content_type = "text/css";
+				}
+				else if (extension == "js")
+				{
+					content_type = "application/javascript";
+				}
+				response.setBody(ss.str(), content_type);
 				res_buffer = response.makeString();
 			}
 			else if (S_ISDIR(file_stat.st_mode))
 			{
 				std::cout << "here in ISDIR" << std::endl;
-				if (loc.isAutoindexOn() == true)
+				if (loc.isAutoindexOn())
 				{
 					std::cout << "here in autoindexOn" << std::endl;
 					response.status_code = OK;
@@ -429,4 +443,12 @@ void	ClientConnection::retrieveHost()
 	{
 		throw std::runtime_error(strerror(errno));
 	}
+}
+
+std::string ClientConnection::getFileExtension(const std::string& filepath)
+{
+	size_t pos = filepath.rfind('.');
+	if (pos == std::string::npos || pos == filepath.size() - 1)
+		return "";
+	return filepath.substr(pos + 1);
 }

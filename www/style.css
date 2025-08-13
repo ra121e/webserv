@@ -1,38 +1,102 @@
+:root {
+    --bg: #0f172a;
+    --bg-soft: #111827;
+    --card: #0b1220;
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #a78bfa;
+}
+
+* { box-sizing: border-box; }
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     margin: 0;
     padding: 0;
-    background-color: #fafafa;
-    color: #333;
+    background: radial-gradient(1200px 800px at 10% -10%, rgba(56,189,248,.15), transparent 50%),
+                radial-gradient(1200px 800px at 110% 10%, rgba(167,139,250,.12), transparent 50%),
+                var(--bg);
+    color: var(--text);
 }
 
 header {
-    background-color: #333;
-    color: white;
-    padding: 1em;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(17,24,39,0.85);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
+    backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid rgba(148,163,184,0.15);
 }
 
-header h1 {
-    margin: 0;
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: .3px;
+}
+.brand .logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 20px rgba(56,189,248,.35);
 }
 
 nav a {
-    color: white;
-    margin-right: 1em;
+    color: var(--text);
+    margin-left: 14px;
     text-decoration: none;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all .15s ease;
+    border: 1px solid transparent;
 }
-
 nav a:hover {
-    text-decoration: underline;
+    color: var(--accent);
+    border-color: rgba(56,189,248,.35);
+    background: rgba(56,189,248,.08);
 }
 
 main {
-    padding: 2em;
+    padding: 28px 16px 40px;
 }
+
+.page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.card {
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    border: 1px solid rgba(148,163,184,0.15);
+    border-radius: 14px;
+    padding: 18px 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+
+.muted { color: var(--muted); }
 
 footer {
     text-align: center;
-    padding: 1em;
-    background-color: #eee;
-    margin-top: 2em;
+    padding: 18px 16px 24px;
+    color: var(--muted);
+    border-top: 1px solid rgba(148,163,184,0.15);
+    background: rgba(17,24,39,0.4);
 }
