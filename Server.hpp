@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <sys/types.h>
 #include <utility>
 #include <vector>
 #include <map>
@@ -28,12 +29,12 @@ public:
 	void	setClientMaxBodySize(uint64_t _client_max_body_size);
 	void	addErrorPage(const std::string& error, const std::string& page);
 	void	addLocation(const std::string& path, const Location& location);
-//	Location	*getLocation(std::string const &uri);
 	const Location&	getLocation(std::string const &uri) const;
 	const std::map<std::string, Location> &getLocations() const;
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;
 	std::string getErrorPage(int code) const;
+	uint64_t getClientMaxBodySize() const;
 };
 
 #endif

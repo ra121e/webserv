@@ -6,14 +6,14 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:46:37 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 17:41:17 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 20:10:23 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "HttpRequest.hpp"
 
 HttpRequest::HttpRequest():
-	is_header_parse(false), waiting_for_body(false), header_end_pos(0), content_length(0)
+	is_header_parse(false), waiting_for_body(false), body_too_large(false), header_end_pos(0), content_length(0)
 {}
 HttpRequest::HttpRequest(HttpRequest const &other):
 	method(other.method),
@@ -23,6 +23,7 @@ HttpRequest::HttpRequest(HttpRequest const &other):
 	body(other.body),
 	is_header_parse(other.is_header_parse),
 	waiting_for_body(other.waiting_for_body),
+	body_too_large(other.body_too_large),
 	header_end_pos(other.header_end_pos),
 	content_length(other.content_length)
 {}
@@ -38,6 +39,7 @@ HttpRequest	&HttpRequest::operator=(HttpRequest const &other)
 		this->body = other.body;
 		this->is_header_parse = other.is_header_parse;
 		this->waiting_for_body = other.waiting_for_body;
+		this->body_too_large = other.body_too_large;
 		this->header_end_pos = other.header_end_pos;
 		this->content_length = other.content_length;
 	}

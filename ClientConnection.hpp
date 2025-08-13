@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/12 21:47:35 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 20:06:12 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,6 +60,7 @@ class ClientConnection
 		static const int BAD_REQUEST = 400;
 		static const int RESOURCE_NOT_FOUND = 404;
 		static const int METHOD_NOT_ALLOWED = 405;
+		static const int PAYLOAD_TOO_LARGE = 413;
 		static const int INTERNAL_SERVER_ERROR = 500;
 
 		std::string	readFileContent(const std::string &path) const;

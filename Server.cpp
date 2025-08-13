@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <utility>
 #include <vector>
 #include <fcntl.h>
@@ -133,4 +134,9 @@ std::string Server::getErrorPage(int code) const
 		return it->second;
 	}
 	return "";
+}
+
+uint64_t Server::getClientMaxBodySize() const
+{
+	return client_max_body_size;
 }

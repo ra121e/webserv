@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:36:16 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 17:40:43 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 20:09:56 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,7 @@ class HttpRequest
 
 		bool	is_header_parse;
 		bool	waiting_for_body;
+		bool	body_too_large;
 		size_t	header_end_pos;
 		size_t	content_length;
 	private:

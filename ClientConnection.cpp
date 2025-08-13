@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 17:42:54 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 20:20:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -163,6 +163,11 @@ bool	ClientConnection::parseRequest()
 		std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
 		std::stringstream	ss_content_length(it->second);
 		ss_content_length >> request.content_length;
+		if (request.content_length > getServer()->getClientMaxBodySize())
+		{
+			request.body_too_large = true;
+			return true;
+		}
 		request.waiting_for_body = true;
 	}
 
@@ -243,6 +248,13 @@ void	ClientConnection::makeResponse()
 {
 	try
 	{
+		if (request.body_too_large)
+		{
+			sendErrorResponse(PAYLOAD_TOO_LARGE, "Payload Too Large",
+				server->getErrorPage(PAYLOAD_TOO_LARGE),
+				std::vector<std::string>());
+			return;
+		}
 		std::cout << "Looking up location for : " << request.uri << std::endl;
 		const Location&	loc = server->getLocation(request.uri);
 		std::cout << "Location resolved: " << loc.getAlias() << std::endl ;
