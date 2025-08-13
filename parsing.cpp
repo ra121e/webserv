@@ -43,6 +43,16 @@ static bool	parse_route_attributes(const std::string& line, Location& route)
 //			route.setAlias(word);
 			route.setIndex(word);
 		}
+		else if (word == "redirect")
+		{
+			std::string code_str, target;
+			if (!(iss >> code_str) || !(iss >> target))
+				throw std::ios_base::failure("Error: redirect directive must have [status_code] [target_url]");
+			int	code = std::atoi(code_str.c_str());
+			if (code < 300 || code > 399)
+				throw std::runtime_error("Error: redirect status code must be in3xx range");
+			route.setRedirect(target, code);
+		}
 		else if (word == "}")
 			return false;
 		else

@@ -104,6 +104,11 @@ const Location&	Server::getLocation(std::string const &uri) const
 	throw std::runtime_error("Location not found");
 }
 
+const std::map<std::string, Location> &Server::getLocations() const
+{
+	return locations;
+}
+
 void	Server::setup()
 {
 	for (std::vector<Network*>::iterator it = networks.begin(); it != networks.end(); ++it)
