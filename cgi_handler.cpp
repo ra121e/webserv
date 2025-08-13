@@ -313,6 +313,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 				std::cerr << "Timeout waiting for CGI output. Killing child process." << std::endl;
 				kill(pid, SIGKILL);
 				timeout_occurred = true;
+				done = true;
 				break;
 			}
 			else if (nfds == -1) // error
@@ -320,6 +321,10 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 				if (errno == EINTR) // interrupted by signal, try again
 					continue; 
 				perror("epoll_wait");
+				std::cerr << "Error in epoll_wait. Killing child process." << std::endl;
+				kill(pid, SIGKILL);
+				timeout_occurred = true;
+				done = true;
 				break;
 			}
 			else
