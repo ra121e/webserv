@@ -1,6 +1,6 @@
 #include "Location.hpp"
 
-Location::Location() : is_redirect(false), redirect_code(302)
+Location::Location() : autoindex(false), is_redirect(false), redirect_code(302)
 {
 }
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
+/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 20:20:52 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 20:54:02 by athonda          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -150,7 +150,7 @@ bool	ClientConnection::parseRequest()
 		}
 		request.is_header_parse = true;
 	}
-	
+
 	if (!request.waiting_for_body)
 	{
 		if (request.method == GET || request.method == DELETE)
@@ -258,7 +258,7 @@ void	ClientConnection::makeResponse()
 		std::cout << "Looking up location for : " << request.uri << std::endl;
 		const Location&	loc = server->getLocation(request.uri);
 		std::cout << "Location resolved: " << loc.getAlias() << std::endl ;
-		
+
 		if (loc.getIsRedirect())
 		{
 			response.status_code = loc.getRedirectCode();
@@ -269,7 +269,7 @@ void	ClientConnection::makeResponse()
 			else
 				response.status_message = "Redirect";
 			response.addHeader("Location", loc.getRedirectTarget());
-			
+
 			std::stringstream body;
 			body	<< "<html><body>"
 				<< "<h1>" << response.status_message << "</h1>"
@@ -277,7 +277,7 @@ void	ClientConnection::makeResponse()
 				<< loc.getRedirectTarget() << "\">"
 				<< loc.getRedirectTarget() << "</a></p>"
 				<< "</body></html>";
-			
+
 			response.setBody(body.str(), "text/html");
 			res_buffer = response.makeString();
 			return ;
@@ -375,7 +375,7 @@ void	ClientConnection::makeResponse()
 			else if (S_ISDIR(file_stat.st_mode))
 			{
 				std::cout << "here in ISDIR" << std::endl;
-				if (loc.isAutoindexOn())
+				if (loc.isAutoindexOn() == true)
 				{
 					std::cout << "here in autoindexOn" << std::endl;
 					response.status_code = OK;
