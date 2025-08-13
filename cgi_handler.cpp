@@ -300,7 +300,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 		fcntl(pipe_stdout[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
 		
 		std::string cgi_output;
-		const int TIMEOUT_MS = 3000; // 3 seconds timeout
+		const int TIMEOUT_MS = 8000; // 3 seconds timeout
 		bool done = false;
 		bool timeout_occurred = false;
 		while (!done)
@@ -364,7 +364,27 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 		if (!timeout_occurred) // if timeout has not occured, we monitor the status flags // 
 		{
 			int status;
-			waitpid(pid, &status, 0);
+			pid_t result = waitpid(pid, &status, WNOHANG);
+			if (result == 0)
+			{
+			}
+			else if (result == pid)
+			{
+				if (WIFEXITED(status))
+				{
+					int exit_code = WEXITSTATUS(status);
+					std::cout << "CGI script exited normally with code "
+						<< exit_code << std::endl;
+				}
+				else if (WIFSIGNALED(status))
+				{
+					int term_sig = WTERMSIG(status);
+					std::cout << "CGI script was terminated by signal "
+						<< term_sig << std::endl;
+				}
+				// Mark that you are done reading from CGI output because the child terminated.
+				done = true;
+			}		
 		}
 		free_envp(cgi_envp);
 		// Use cgi_output as the CGI script response content

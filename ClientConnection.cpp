@@ -229,6 +229,30 @@ void	ClientConnection::makeResponse()
 		std::cout << "Looking up location for : " << request.uri << std::endl;
 		const Location&	loc = server->getLocation(request.uri);
 		std::cout << "Location resolved: " << loc.getAlias() << std::endl ;
+		
+		if (loc.getIsRedirect())
+		{
+			response.status_code = loc.getRedirectCode();
+			if (response.status_code == 301)
+				response.status_message = "Moved Permanently";
+			else if (response.status_code == 302)
+				response.status_message = "Found";
+			else
+				response.status_message = "Redirect";
+			response.addHeader("Location", loc.getRedirectTarget());
+			
+			std::stringstream body;
+			body	<< "<html><body>"
+				<< "<h1>" << response.status_message << "</h1>"
+				<< "<p>This resource has moved to <a href=\""
+				<< loc.getRedirectTarget() << "\">"
+				<< loc.getRedirectTarget() << "</a></p>"
+				<< "</body></html>";
+			
+			response.setBody(body.str(), "text/html");
+			res_buffer = response.makeString();
+			return ;
+		}
 		if (!loc.isMethod(request.method))
 		{
 			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed",
@@ -236,7 +260,7 @@ void	ClientConnection::makeResponse()
 					std::vector<std::string>());
 			return ;
 		}
-		if (is_cgi_script(request.uri))
+		/*if (is_cgi_script(request.uri))
 		{
 			std::cout << "getAlias : " << loc.getAlias() << std::endl;
 			std::cout << "getUri : " << request.uri << std::endl;
@@ -252,7 +276,7 @@ void	ClientConnection::makeResponse()
 					server->getErrorPage(INTERNAL_SERVER_ERROR),
 					std::vector<std::string>());
 			return ;
-		}
+		}*/
 		else if (request.method == POST)
 		{
 			size_t	filename_start_pos = request.body.find("filename=\"");

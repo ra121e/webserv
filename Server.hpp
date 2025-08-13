@@ -30,6 +30,7 @@ public:
 	void	addLocation(const std::string& path, const Location& location);
 //	Location	*getLocation(std::string const &uri);
 	const Location&	getLocation(std::string const &uri) const;
+	const std::map<std::string, Location> &getLocations() const;
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;
 	std::string getErrorPage(int code) const;

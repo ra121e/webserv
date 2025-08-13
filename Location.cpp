@@ -1,6 +1,6 @@
 #include "Location.hpp"
 
-Location::Location()
+Location::Location() : is_redirect(false), redirect_code(302)
 {
 }
 
@@ -28,6 +28,13 @@ void	Location::setIndex(const std::string& _index)
 	index = _index;
 }
 
+void	Location::setRedirect(const std::string &target, int code)
+{
+	is_redirect = true;
+	redirect_target = target;
+	redirect_code = code;
+}
+
 bool	Location::isMethod(std::string const &method) const
 {
 	for (size_t i = 0; i < methods.size(); ++i)
@@ -51,4 +58,19 @@ const std::string	&Location::getAlias() const
 const std::string	&Location::getIndex() const
 {
 	return (index);
+}
+
+bool	Location::getIsRedirect() const
+{
+	return (is_redirect);
+}
+
+std::string Location::getRedirectTarget() const
+{
+	return (redirect_target);
+}
+
+int	Location::getRedirectCode() const
+{
+	return (redirect_code);
 }
