@@ -27,8 +27,8 @@ public:
 	~Epoll();
 	int	getFd() const;
 	void	addEventListener(Server* server, int listen_fd);
+	void	modifyEventListener(ClientConnection *client) const;
 	void	addClient(int server_fd);
-	void	modifyEventListener(ClientConnection *client);
 	void	handleEvents();
 };
 

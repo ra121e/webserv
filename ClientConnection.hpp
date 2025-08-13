@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.hpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/12 20:21:00 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/12 21:47:35 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,7 @@ class ClientConnection
 		Server	*getServer() const;
 
 		void	appendToBuffer(char const *data, size_t size);
-		void	parseRequest();
+		bool	parseRequest();
 		void	makeResponse();
 		bool	sendResponse();
 		void	retrieveHost();

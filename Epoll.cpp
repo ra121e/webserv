@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <sys/epoll.h>
 #include <vector>
 #include <fcntl.h>
 #include <iostream>
@@ -67,7 +68,7 @@ void	Epoll::addClient(int server_fd)
 	clients[client->getFd()] = client;
 }
 
-void Epoll::modifyEventListener(ClientConnection *client)
+void Epoll::modifyEventListener(ClientConnection *client) const
 {
 	// set server fd and event into event struct (its like "entry sheet" or "application form")
 	struct epoll_event event = {};
@@ -123,7 +124,20 @@ void	Epoll::handleEvents()
 			}
 			ClientConnection*	client = ite->second;
 
-			if (events[i].events & EPOLLIN)
+			if (events[i].events & (EPOLLERR | EPOLLHUP))
+			{
+				// Drain the socket
+				if (events[i].events & EPOLLIN)
+				{
+					char	buf[BUFSIZ];
+					for (ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
+						bytes_read > 0; bytes_read = read(current_fd, buf, sizeof(buf)));
+				}
+				std::cerr << "Client disconnected: " << client->getHost() << std::endl;
+				delete client;
+				clients.erase(current_fd);
+			}
+			else if (events[i].events & EPOLLIN)
 			{
 
 				// read fd untill end
@@ -132,14 +146,23 @@ void	Epoll::handleEvents()
 					// receive data from client fd
 					char	buf[BUFSIZ];
 					ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
+					if (bytes_read == 0)
+					{
+						delete client;
+						clients.erase(current_fd);
+						break;
+					}
 					if (bytes_read == -1)
+					{
+						continue;
+					}
+					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
+					if (client->parseRequest())
 					{
 						break;
 					}
-					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
 				}
 
-				client->parseRequest();
 				std::cout << client->getRequest().method << std::endl;
 				std::cout << client->getRequest().uri << std::endl;
 				std::cout << client->getRequest().version << std::endl;

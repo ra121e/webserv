@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   ClientConnection.cpp                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: athonda <athonda@student.42singapore.sg    +#+  +:+       +#+        */
+/*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/12 20:29:04 by athonda          ###   ########.fr       */
+/*   Updated: 2025/08/13 17:42:54 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -116,45 +116,62 @@ void	ClientConnection::appendToBuffer(char const *data, size_t size)
 	buffer.append(data, size);
 }
 
-void	ClientConnection::parseRequest()
+bool	ClientConnection::parseRequest()
 {
-	size_t	header_end_pos	= buffer.find("\r\n\r\n");
-
-	// start all of header part(until new line)
-	std::string	header_string = buffer.substr(0, header_end_pos);
-	std::stringstream	ss(header_string);
-
-	// first line
-	ss >> request.method >> request.uri >> request.version;
-	request.is_header_parse = true;
-
-	// header main part
-	size_t	request_line_end = header_string.find("\r\n");
-	header_string = header_string.substr(request_line_end + 2);
-	for (size_t pos = header_string.find("\r\n"); pos != std::string::npos; pos = header_string.find("\r\n"))
+	if (!request.is_header_parse)
 	{
-		std::string header_line = header_string.substr(0, pos);
-		size_t	colon_pos = header_line.find(": ");
-		if (colon_pos != std::string::npos)
+		request.header_end_pos	= buffer.find("\r\n\r\n");
+		if (request.header_end_pos == std::string::npos)
 		{
-			std::string	key = header_line.substr(0, colon_pos);
-			std::string	value = header_line.substr(colon_pos + 2); // skip ": "
-			request.headers[key] = value;
+			return false; // Not enough data to parse the request
 		}
-		header_string.erase(0, pos + 2); // skip "\r\n"
-	}
 
-	if (request.method == GET || request.method == DELETE)
+		// start all of header part(until new line)
+		std::string	header_string = buffer.substr(0, request.header_end_pos);
+		std::stringstream	ss(header_string);
+
+		// first line
+		ss >> request.method >> request.uri >> request.version;
+
+		// header main part
+		size_t	request_line_end = header_string.find("\r\n");
+		header_string = header_string.substr(request_line_end + 2);
+		for (size_t pos = header_string.find("\r\n"); pos != std::string::npos; pos = header_string.find("\r\n"))
+		{
+			std::string header_line = header_string.substr(0, pos);
+			size_t	colon_pos = header_line.find(": ");
+			if (colon_pos != std::string::npos)
+			{
+				std::string	key = header_line.substr(0, colon_pos);
+				std::string	value = header_line.substr(colon_pos + 2); // skip ": "
+				request.headers[key] = value;
+			}
+			header_string.erase(0, pos + 2); // skip "\r\n"
+		}
+		request.is_header_parse = true;
+	}
+	
+	if (!request.waiting_for_body)
 	{
-		return;
+		if (request.method == GET || request.method == DELETE)
+		{
+			return true;
+		}
+
+		// body part
+		buffer.erase(0, request.header_end_pos + 4); // Remove header part from buffer
+		std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
+		std::stringstream	ss_content_length(it->second);
+		ss_content_length >> request.content_length;
+		request.waiting_for_body = true;
 	}
 
-	// body part
-	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
-	std::stringstream	ss_content_length(it->second);
-	size_t	content_length = 0;
-	ss_content_length >> content_length;
-	request.body = buffer.substr(header_end_pos + 4, content_length);
+	if (buffer.size() < request.content_length)
+	{
+		return false; // Not enough data to read the body
+	}
+	request.body = buffer;
+	return true;
 }
 
 std::string	ClientConnection::readFileContent(const std::string &path) const

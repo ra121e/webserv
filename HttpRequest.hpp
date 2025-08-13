@@ -6,13 +6,14 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:36:16 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/12 16:26:52 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/13 17:40:43 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTPREQUEST_HPP
 # define HTTPREQUEST_HPP
 
+#include <cstddef>
 #include <string>
 #include <map>
 
@@ -32,6 +33,9 @@ class HttpRequest
 		std::string	body;
 
 		bool	is_header_parse;
+		bool	waiting_for_body;
+		size_t	header_end_pos;
+		size_t	content_length;
 	private:
 
 };
