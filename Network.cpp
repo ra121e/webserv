@@ -55,7 +55,7 @@ void	Network::setupListener()
 {
 	struct addrinfo	hints = {};
 	struct addrinfo	*res = NULL;
-	const int	BACKLOG = 10;
+	const int	BACKLOG = 1024;
 	int	yes = 1;
 
 	hints.ai_family = AF_UNSPEC;

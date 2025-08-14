@@ -78,13 +78,9 @@ const Location&	Server::getLocation(std::string const &uri) const
 	size_t pos = clean_uri.find('?');
 	if (pos != std::string::npos)
 		clean_uri.erase(pos);
-		
-	std::cout << "Original Uri: " << uri << std::endl;
-	std::cout << "Clean URI: " << clean_uri << std::endl;
 	
 	for (std::map<std::string, Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
 	{
-		std::cout << "it->first " << it->first << std::endl;
 		const std::string& path = it->first;
 		if (path[path.size() - 1] == '/' && path != "/")
 		{
@@ -96,12 +92,9 @@ const Location&	Server::getLocation(std::string const &uri) const
 		}
 		else if (path == clean_uri)
 		{
-			std::cout << "Location exact match: path=[" << path 
-              << "], uri=[" << clean_uri << "]" << std::endl;
 			return it->second;
 		}
 	}
-	std::cerr << "No Location match for URI: [" << uri << "]" << std::endl;
 	throw std::runtime_error("Location not found");
 }
 

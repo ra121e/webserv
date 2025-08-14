@@ -133,33 +133,26 @@ void	Epoll::handleEvents()
 					for (ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
 						bytes_read > 0; bytes_read = read(current_fd, buf, sizeof(buf)));
 				}
-				std::cerr << "Client disconnected: " << client->getHost() << std::endl;
 				delete client;
 				clients.erase(current_fd);
 			}
 			else if (events[i].events & EPOLLIN)
 			{
-
-				// read fd untill end
-				while (true)
+				// receive data from client fd
+				char	buf[BUFSIZ];
+				ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
+				if (bytes_read == 0)
 				{
-					// receive data from client fd
-					char	buf[BUFSIZ];
-					ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
-					if (bytes_read == 0)
-					{
-						client->setDisconnected(true);
-						break;
-					}
-					if (bytes_read == -1)
-					{
-						continue;
-					}
-					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
-					if (client->parseRequest())
-					{
-						break;
-					}
+					client->setDisconnected(true);
+				}
+				else if (bytes_read == -1)
+				{
+					continue;
+				}
+				client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
+				if (!client->parseRequest())
+				{
+					continue; // Not enough data to parse the request
 				}
 				if (client->isDisconnected())
 				{
@@ -167,17 +160,7 @@ void	Epoll::handleEvents()
 					clients.erase(current_fd);
 					continue;
 				}
-				std::cout << client->getRequest().method << std::endl;
-				std::cout << client->getRequest().uri << std::endl;
-				std::cout << client->getRequest().version << std::endl;
-				std::map<std::string, std::string>::const_iterator it_tmp = client->getRequest().headers.begin();
-				for (; it_tmp != client->getRequest().headers.end(); ++it_tmp)
-					std::cout << it_tmp->first << ": " << it_tmp->second << std::endl;
-
 				client->makeResponse();
-				std::cout << "Response Ready! to FD: " << client->getFd() << std::endl;
-				std::cout << client->getResponseBuffer() << std::endl;
-
 				modifyEventListener(client);
 			}
 			else if (events[i].events & EPOLLOUT)

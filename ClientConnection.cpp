@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/14 16:15:36 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/14 18:52:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -243,11 +243,9 @@ std::string	ClientConnection::makeIndexof(std::string const &path_dir, std::stri
 	DIR	*dir = opendir(path_dir.c_str());
 	if (dir)
 	{
-		std::cout << "here in dir" << std::endl;
 		struct dirent	*ent;
 		while ((ent = readdir(dir)) != NULL)
 		{
-			std::cout << "in while loop to make list" << std::endl;
 //			html << "<a href=\"" << uri << ent->d_name << "\">" << ent->d_name << "</a><p>";
 			html << ent->d_name << "<p>";
 		}
@@ -268,9 +266,7 @@ void	ClientConnection::makeResponse()
 				std::vector<std::string>());
 			return;
 		}
-		std::cout << "Looking up location for : " << request.uri << std::endl;
 		const Location&	loc = server->getLocation(request.uri);
-		std::cout << "Location resolved: " << loc.getAlias() << std::endl ;
 
 		if (loc.getIsRedirect())
 		{
@@ -368,7 +364,6 @@ void	ClientConnection::makeResponse()
 		{
 			if (S_ISREG(file_stat.st_mode))
 			{
-				std::cout << "here in ISREG" << std::endl;
 				std::ifstream	file(filepath.c_str(), std::ios::binary);
 				if (!file)
 				{
@@ -401,10 +396,8 @@ void	ClientConnection::makeResponse()
 			}
 			else if (S_ISDIR(file_stat.st_mode))
 			{
-				std::cout << "here in ISDIR" << std::endl;
 				if (loc.isAutoindexOn())
 				{
-					std::cout << "here in autoindexOn" << std::endl;
 					response.status_code = OK;
 					response.status_message = "OK";
 					response.setBody(makeIndexof(filepath, request.uri), "text/html");
