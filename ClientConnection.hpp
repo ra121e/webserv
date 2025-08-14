@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 22:18:52 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/14 16:15:28 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,8 @@ class ClientConnection
 		const std::string	&getResponseBuffer() const;
 		std::string getHost() const;
 		Server	*getServer() const;
+		bool	isDisconnected() const;
+		void	setDisconnected(bool value);
 
 		void	appendToBuffer(char const *data, size_t size);
 		bool	parseRequest();
@@ -50,6 +52,7 @@ class ClientConnection
 		socklen_t			addr_len;
 		struct sockaddr_in	client_addr;
 		int					fd;
+		bool				disconnected;
 		Server				*server;
 		char				host[NI_MAXHOST];
 		std::string			buffer;

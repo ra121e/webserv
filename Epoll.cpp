@@ -148,8 +148,7 @@ void	Epoll::handleEvents()
 					ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
 					if (bytes_read == 0)
 					{
-						delete client;
-						clients.erase(current_fd);
+						client->setDisconnected(true);
 						break;
 					}
 					if (bytes_read == -1)
@@ -162,7 +161,12 @@ void	Epoll::handleEvents()
 						break;
 					}
 				}
-
+				if (client->isDisconnected())
+				{
+					delete client;
+					clients.erase(current_fd);
+					continue;
+				}
 				std::cout << client->getRequest().method << std::endl;
 				std::cout << client->getRequest().uri << std::endl;
 				std::cout << client->getRequest().version << std::endl;

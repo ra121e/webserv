@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 22:21:22 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/14 16:15:36 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,6 +37,7 @@ ClientConnection::ClientConnection()
 ClientConnection::ClientConnection(int server_fd, Server *srv):
 	addr_len(sizeof(client_addr)),
 	fd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)),
+	disconnected(false),
 	server(srv)
 {
 	if (fd < 0)
@@ -53,6 +54,7 @@ ClientConnection::ClientConnection(int server_fd, Server *srv):
 
 ClientConnection::ClientConnection(ClientConnection const &other):
 	fd(dup(other.fd)),
+	disconnected(other.disconnected),
 	server(new Server(*other.server)),
 	buffer(other.buffer),
 	request(other.request)
@@ -63,6 +65,7 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 	if (this != &other)
 	{
 		this->fd = dup(other.fd);
+		this->disconnected = other.disconnected;
 		this->buffer = other.buffer;
 		this->request = other.request;
 		delete this->server;
@@ -109,6 +112,16 @@ std::string ClientConnection::getHost() const
 Server	*ClientConnection::getServer() const
 {
 	return (server);
+}
+
+bool	ClientConnection::isDisconnected() const
+{
+	return disconnected;
+}
+
+void ClientConnection::setDisconnected(bool value)
+{
+	disconnected = value;
 }
 
 void	ClientConnection::appendToBuffer(char const *data, size_t size)
