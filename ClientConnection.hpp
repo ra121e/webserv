@@ -37,7 +37,7 @@ class ClientConnection
 
 		const HttpResponse	&getResponse() const;
 		const std::string	&getResponseBuffer() const;
-		std::string getHost() const;
+		const std::string& getHost() const;
 		Server	*getServer() const;
 		bool	isDisconnected() const;
 		void	setDisconnected(bool value);
@@ -54,7 +54,7 @@ class ClientConnection
 		int					fd;
 		bool				disconnected;
 		Server				*server;
-		char				host[NI_MAXHOST];
+		std::string			host;
 		std::string			buffer;
 		std::string			res_buffer;
 		HttpRequest			request;
@@ -69,7 +69,7 @@ class ClientConnection
 			METHOD_NOT_ALLOWED = 405,
 			PAYLOAD_TOO_LARGE = 413,
 			INTERNAL_SERVER_ERROR = 500
-		} status_codes;
+		};
 
 		std::string	readFileContent(const std::string &path) const;
 		void		sendErrorResponse(int status_code,

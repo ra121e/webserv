@@ -12,7 +12,7 @@
 
 NAME_S	=	webserv
 
-SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp parsing.cpp\
+SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp\
             cgi_handler.cpp cgi_utils.cpp Epoll.cpp ClientConnection.cpp\
             HttpRequest.cpp HttpResponse.cpp TmpDirCleaner.cpp
 

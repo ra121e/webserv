@@ -15,6 +15,8 @@ public:
 	void	addServer(Server* server);
 	void	setupServers();
 	const std::vector<Server*>&	getServers() const;
+	void	get_file_config(const char *filename);
+	void	parse_server(std::ifstream& infile, std::istringstream& iss);
 };
 
 #endif

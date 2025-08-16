@@ -52,6 +52,123 @@ Server::~Server()
 	}
 }
 
+void	Server::parse_listen(std::istringstream &ss)
+{
+	std::string	word;
+
+	if (ss >> word)
+	{
+		size_t	colonPos = word.find(':');
+		if (colonPos == std::string::npos)
+		{
+			throw std::runtime_error("Error: interface:port expected");
+		}
+		const std::string&	hostStr = word.substr(0, colonPos);
+		const std::string&	portStr = word.substr(colonPos + 1);
+		addNetwork(new Network(hostStr, portStr));
+	}
+	else
+	{
+		throw std::ios_base::failure("Error: interface:port expected");
+	}
+}
+
+void	Server::parse_client_max_body_size(std::istringstream &ss)
+{
+	std::string	word;
+
+	if (ss >> word)
+	{
+		std::istringstream	iss(word);
+		uint64_t			size = 0;
+		if (!(iss >> size))
+		{
+			throw std::ios_base::failure("Error: client_max_body_size must be a 64-bit integer");
+		}
+		setClientMaxBodySize(size);
+	}
+	else
+	{
+		throw std::ios_base::failure("Error: Missing client_max_body_size number");
+	}
+}
+
+void	Server::parse_error_pages(std::ifstream& infile, std::istringstream& ss)
+{
+	std::string	word;
+	std::string	line;
+
+	if (ss >> word)
+	{
+		if (word != "{")
+		{
+			throw std::runtime_error("Error: expected '{'");
+		}
+		if (ss >> word)
+		{
+			throw std::runtime_error("Error: unexpected token '" + word + "'");
+		}
+		while (std::getline(infile, line) != 0)
+		{
+			if (!parse_single_error_page(line))
+			{
+				break;
+			}
+		}
+	}
+	else
+	{
+		throw std::ios_base::failure("Error: expected '{'");
+	}
+}
+
+bool	Server::parse_single_error_page(const std::string& line)
+{
+	std::istringstream	iss(line);
+	std::string			error;
+	std::string			page;
+
+	if (!(iss >> error))
+	{
+		return true;
+	}
+	if (error == "}")
+	{
+		return false;
+	}
+	if (!(iss >> page))
+	{
+		throw std::ios_base::failure("Error: expected [error_code] [error_page]");
+	}
+	addErrorPage(error, page);
+	return true;
+}
+
+void	Server::parse_route(std::ifstream& infile, std::istringstream& ss)
+{
+	std::string	word;
+	std::string	line;
+	std::string	path;
+	Location	route;
+
+	if (ss >> word)
+	{
+		path = word;
+		if (!(ss >> word) || word != "{")
+		{
+			throw std::ios_base::failure("Error: expected '{'");
+		}
+		while (std::getline(infile, line) != 0)
+		{
+			if (!route.parse_route_attributes(line))
+				break;
+		}
+		addLocation(path, route);
+	}
+	else
+		throw std::ios_base::failure("Error: expected a route path");
+}
+
 void	Server::addNetwork(Network* net)
 {
 	networks.push_back(net);
@@ -116,17 +233,17 @@ const std::vector<Network*>&	Server::getNetworks() const
 	return networks;
 }
 
-std::string Server::getErrorPage(int code) const
+const std::string& Server::getErrorPage(int code) const
 {
 	std::ostringstream oss;
 	oss << code;
 	std::string codeStr = oss.str();
 	std::map<std::string, std::string>::const_iterator it = error_pages.find(codeStr);
-	if (it != error_pages.end())
+	if (it == error_pages.end())
 	{
-		return it->second;
+		throw std::invalid_argument("Error page not found for code: " + codeStr);
 	}
-	return "";
+	return it->second;
 }
 
 uint64_t Server::getClientMaxBodySize() const

@@ -9,10 +9,7 @@
 #include <arpa/inet.h>
 #include <sys/epoll.h> // epoll
 #include <fcntl.h> //fcntl, O_NONBLOCK
-#include "Config.hpp"
-#include "Epoll.hpp"
 
-void	get_file_config(const char *filename, Config& conf);
 extern "C" void handle_sigint_c(int signum);
 
 #endif

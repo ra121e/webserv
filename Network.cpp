@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-Network::Network()
+Network::Network() : socket_fd(-1)
 {
 }
 
@@ -41,12 +41,12 @@ int	Network::getFd() const
 	return socket_fd;
 }
 
-std::string	Network::getHost() const
+const std::string&	Network::getHost() const
 {
 	return host;
 }
 
-std::string	Network::getPort() const
+const std::string&	Network::getPort() const
 {
 	return port;
 }

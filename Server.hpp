@@ -25,6 +25,11 @@ public:
 	Server(const Server& other);
 	Server&	operator=(const Server& other);
 	~Server();
+	void	parse_listen(std::istringstream &ss);
+	void	parse_client_max_body_size(std::istringstream &ss);
+	void	parse_error_pages(std::ifstream& infile, std::istringstream& ss);
+	bool	parse_single_error_page(const std::string& line);
+	void	parse_route(std::ifstream& infile, std::istringstream& ss);
 	void	addNetwork(Network* net);
 	void	setClientMaxBodySize(uint64_t _client_max_body_size);
 	void	addErrorPage(const std::string& error, const std::string& page);
@@ -33,7 +38,7 @@ public:
 	const std::map<std::string, Location> &getLocations() const;
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;
-	std::string getErrorPage(int code) const;
+	const std::string& getErrorPage(int code) const;
 	uint64_t getClientMaxBodySize() const;
 };
 

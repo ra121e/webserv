@@ -17,8 +17,10 @@
 #include <cstring>
 #include <string>
 #include <sys/epoll.h>
-#include <vector>
+#include <iostream>
 #include "TmpDirCleaner.hpp"
+#include "Config.hpp"
+#include "Epoll.hpp"
 
 // Signal-safe run flag
 static volatile sig_atomic_t g_run = 1;
@@ -42,7 +44,7 @@ int	main(int argc, char **argv)
 	}
 	try
 	{
-		get_file_config(argv[1], conf);
+		conf.get_file_config(argv[1]);
 		conf.setupServers();
 		Epoll	epoll(epoll_create1(EPOLL_CLOEXEC));
 		for (std::vector<Server*>::const_iterator s_it = conf.getServers().begin(); s_it != conf.getServers().end(); ++s_it)

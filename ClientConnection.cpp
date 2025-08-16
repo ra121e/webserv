@@ -31,11 +31,12 @@ static const char* const	GET = "GET";
 static const char* const	POST = "POST";
 static const char* const	DELETE = "DELETE";
 
-ClientConnection::ClientConnection()
+ClientConnection::ClientConnection() : addr_len(), client_addr(), fd(), disconnected(), server()
 {}
 
 ClientConnection::ClientConnection(int server_fd, Server *srv):
 	addr_len(sizeof(client_addr)),
+	client_addr(),
 	fd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)),
 	disconnected(false),
 	server(srv)
@@ -53,6 +54,8 @@ ClientConnection::ClientConnection(int server_fd, Server *srv):
 }
 
 ClientConnection::ClientConnection(ClientConnection const &other):
+	addr_len(other.addr_len),
+	client_addr(other.client_addr),
 	fd(dup(other.fd)),
 	disconnected(other.disconnected),
 	server(new Server(*other.server)),
@@ -64,6 +67,8 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 {
 	if (this != &other)
 	{
+		addr_len = other.addr_len;
+		client_addr = other.client_addr;
 		this->fd = dup(other.fd);
 		this->disconnected = other.disconnected;
 		this->buffer = other.buffer;
@@ -104,9 +109,9 @@ const std::string	&ClientConnection::getResponseBuffer() const
 	return (res_buffer);
 }
 
-std::string ClientConnection::getHost() const
+const std::string& ClientConnection::getHost() const
 {
-	return std::string(host);
+	return host;
 }
 
 Server	*ClientConnection::getServer() const
@@ -151,12 +156,12 @@ bool	ClientConnection::parseRequest()
 		header_string = header_string.substr(request_line_end + 2);
 		for (size_t pos = header_string.find("\r\n"); pos != std::string::npos; pos = header_string.find("\r\n"))
 		{
-			std::string header_line = header_string.substr(0, pos);
+			const std::string& header_line = header_string.substr(0, pos);
 			size_t	colon_pos = header_line.find(": ");
 			if (colon_pos != std::string::npos)
 			{
-				std::string	key = header_line.substr(0, colon_pos);
-				std::string	value = header_line.substr(colon_pos + 2); // skip ": "
+				const std::string&	key = header_line.substr(0, colon_pos);
+				const std::string&	value = header_line.substr(colon_pos + 2); // skip ": "
 				request.headers[key] = value;
 			}
 			header_string.erase(0, pos + 2); // skip "\r\n"
@@ -208,7 +213,7 @@ void	ClientConnection::sendErrorResponse(int status_code,
 					const std::vector<std::string> &allow_methods)
 {
 	// Load HTML content from disk
-	std::string content = readFileContent(error_file);
+	const std::string& content = readFileContent(error_file);
 
 	// Set HTTP status
 	response.status_code = status_code;
@@ -294,7 +299,7 @@ void	ClientConnection::makeResponse()
 		{
 			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed",
 				server->getErrorPage(METHOD_NOT_ALLOWED),
-					std::vector<std::string>());
+					loc.getMethods());
 			return ;
 		}
 		if (is_cgi_script(request.uri))
@@ -316,12 +321,13 @@ void	ClientConnection::makeResponse()
 		}
 		if (request.method == POST)
 		{
-			size_t	filename_start_pos = request.body.find("filename=\"");
-			size_t	filename_end_pos = request.body.find("\"", filename_start_pos + 10);
+			const std::string& FILENAME_FIELD = "filename=\"";
+			size_t	filename_start_pos = request.body.find(FILENAME_FIELD);
+			size_t	filename_end_pos = request.body.find('\"', filename_start_pos + FILENAME_FIELD.size());
 			if (filename_start_pos != std::string::npos && filename_end_pos != std::string::npos)
 			{
-				std::string	filename = request.body.substr(filename_start_pos + 10,
-					filename_end_pos - filename_start_pos - 10);
+				const std::string& filename = request.body.substr(filename_start_pos + FILENAME_FIELD.size(),
+					filename_end_pos - filename_start_pos - FILENAME_FIELD.size());
 				std::ofstream	file(("tmp/" + filename).c_str(), std::ios::binary);
 				if (!file)
 				{
@@ -344,8 +350,8 @@ void	ClientConnection::makeResponse()
 		}
 		else if (request.method == DELETE)
 		{
-			size_t	final_slash_pos = request.uri.rfind("/");
-			std::string filename = request.uri.substr(final_slash_pos + 1);
+			size_t	final_slash_pos = request.uri.rfind('/');
+			const std::string& filename = request.uri.substr(final_slash_pos + 1);
 
 			if (unlink(("tmp/" + filename).c_str()) == -1)
 			{
@@ -356,9 +362,9 @@ void	ClientConnection::makeResponse()
 				return;
 			}
 		}
-		std::string	filepath = loc.getAlias() + loc.getIndex();
+		const std::string& filepath = loc.getAlias() + loc.getIndex();
 
-		struct stat file_stat;
+		struct stat file_stat = {};
 		if (stat(filepath.c_str(), &file_stat) == 0)
 		{
 			if (S_ISREG(file_stat.st_mode))
@@ -376,7 +382,7 @@ void	ClientConnection::makeResponse()
 				ss << file.rdbuf();
 				response.status_code = OK;
 				response.status_message = "OK";
-				std::string extension = getFileExtension(filepath);
+				const std::string& extension = getFileExtension(filepath);
 				std::string content_type = "application/octet-stream";
 				if (extension == "html")
 				{
@@ -438,22 +444,27 @@ bool	ClientConnection::sendResponse()
 
 void	ClientConnection::retrieveHost()
 {
+	char host_buffer[NI_MAXHOST];
+
 	if (getnameinfo(reinterpret_cast<struct sockaddr*>(&client_addr),
 	addr_len,
-	host,
-	sizeof(host),
+	static_cast<char *>(host_buffer),
+	sizeof(host_buffer),
 	NULL,
 	0,
 	NI_NUMERICHOST) != 0)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
+	host = static_cast<char *>(host_buffer);
 }
 
 std::string ClientConnection::getFileExtension(const std::string& filepath)
 {
 	size_t pos = filepath.rfind('.');
 	if (pos == std::string::npos || pos == filepath.size() - 1)
+	{
 		return "";
+	}
 	return filepath.substr(pos + 1);
 }
