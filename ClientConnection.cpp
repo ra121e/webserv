@@ -267,7 +267,6 @@ void	ClientConnection::makeResponse()
 			return;
 		}
 		const Location&	loc = server->getLocation(request.uri);
-
 		if (loc.getIsRedirect())
 		{
 			response.status_code = loc.getRedirectCode();
@@ -298,7 +297,7 @@ void	ClientConnection::makeResponse()
 					std::vector<std::string>());
 			return ;
 		}
-		/*if (is_cgi_script(request.uri))
+		if (is_cgi_script(request.uri))
 		{
 			std::cout << "getAlias : " << loc.getAlias() << std::endl;
 			std::cout << "getUri : " << request.uri << std::endl;
@@ -314,7 +313,7 @@ void	ClientConnection::makeResponse()
 					server->getErrorPage(INTERNAL_SERVER_ERROR),
 					std::vector<std::string>());
 			return ;
-		}*/
+		}
 		if (request.method == POST)
 		{
 			size_t	filename_start_pos = request.body.find("filename=\"");

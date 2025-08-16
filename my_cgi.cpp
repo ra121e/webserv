@@ -11,6 +11,8 @@
 /* ************************************************************************** */
 
 #include "cgi_utils.hpp"
+#include <limits.h>
+#include <unistd.h>
 
 int	delete_file(const char *filepath, char **cgi_envp) // needed to use execve to delete a file //
 {
@@ -24,7 +26,7 @@ int	delete_file(const char *filepath, char **cgi_envp) // needed to use execve t
 	{
 		char	*argv[] = {
 			const_cast<char*>("/bin/rm"), // first argument // 
-			const_cast<char*>("-r"), // next one // 
+			const_cast<char*>("-f"), // next one // 
 			const_cast<char*>(filepath), // 3rd one // 
 			NULL // null terminated // 
 			};
@@ -63,16 +65,30 @@ int	read_fully(int fd, char *buffer, size_t length) // handling partial reads //
 	return (total_read);
 }
 
+std::string	getFileNameFromQuery(const std::string &query)
+{
+	std::string key = "file=";
+	size_t	pos = query.find(key);
+	if (pos == std::string::npos)
+		return "";
+	size_t	start = pos + key.length();
+	size_t	end = query.find('&', start);
+	if (end == std::string::npos)
+		end = query.length();
+	return query.substr(start, end-start);
+}
+
 int	main(int ac, char **av, char **envp)
 {
 	(void)ac;
 	(void)av;
+	std::string	base_dir;
+	char	cwd[PATH_MAX];
 	// this is to stimulate timeout for handler // 
 	std::vector<std::string> allowed_methods; // create a vector to hold allowed methods // 
 	allowed_methods.push_back("GET");
 	allowed_methods.push_back("POST");
 	allowed_methods.push_back("DELETE");
-	std::string file_path = "/home/apoh/Documents/test/webserv/cgi-bin/forbidden.txt"; // file path to delete // 
 	const char	*method = std::getenv("REQUEST_METHOD");
 	if (method == NULL) // Check method //
 	{
@@ -129,18 +145,34 @@ int	main(int ac, char **av, char **envp)
 	}
 	else if (std::string(method) == "DELETE") // See if file has permissions, can be found, Any data in it while doing execve or internal server error //
 	{
+		if (getcwd(cwd, sizeof(cwd)) != NULL)
+			base_dir = std::string(cwd) + "/tmp";
+		else
+		{
+			std::cerr << "Failed to find current cwd" << std::endl;
+			return (1);
+		}
 		std::vector<std::string>	empty_methods;
-		if (is_not_found(file_path))
+		std::string query = std::getenv("QUERY_STRING");
+		std::string file_name = getFileNameFromQuery(query);
+		std::cout << "Base_DIR " << base_dir << std::endl;
+		std::cout << "file path: " << file_name << std::endl;
+		std::string full_path = base_dir;
+		if (!base_dir.empty() && base_dir.back() != '/')
+			full_path += "/";
+		full_path += file_name;
+		std::cout << "file path: " << full_path << std::endl;
+		if (is_not_found(full_path))
 		{
 			send_error_response(404, "Not Found", "error_404.html", empty_methods);
 			return (1);
 		}
-		if (is_forbidden(file_path))
+		if (is_forbidden(full_path))
 		{
 			send_error_response(403, "Forbidden", "error_403.html", empty_methods);
 			return (1);
 		}
-		if (delete_file(file_path.c_str(), envp) == 0)
+		if (delete_file(full_path.c_str(), envp) == 0)
 		{
 			std::cout << "HTTP/1.1 204 No Content\r\n\r\n";
 			return (0);

@@ -203,7 +203,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 	
 	if (create_pipe(pipe_stdin) == -1 || create_pipe(pipe_stdout) == -1) // pipe creation fail just error out //
 		return (-1);
-	HttpRequest req = client.getRequest(); // creating a class instance of HttpRequest based on ClientConnection class // 
+	HttpRequest req = client.getRequest(); // creating a class instance of HttpRequest based on ClientConnection class //
 	
 	std::map<std::string, std::string> env_map; // Using map to store all the data, the functions below extract the data // 
 	env_map["REQUEST_METHOD"] = req.method;
