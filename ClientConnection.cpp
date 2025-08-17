@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/14 18:52:52 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/17 23:01:36 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "HttpResponse.hpp"
 #include <cstddef>
 #include <cstring>
+#include <ctime>
 #include <ios>
 #include <netdb.h>
 #include <stdexcept>
@@ -31,36 +32,31 @@ static const char* const	GET = "GET";
 static const char* const	POST = "POST";
 static const char* const	DELETE = "DELETE";
 
-ClientConnection::ClientConnection() : addr_len(), client_addr(), fd(), disconnected(), server()
-{}
-
-ClientConnection::ClientConnection(int server_fd, Server *srv):
+ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
+	BaseFile(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)),
 	addr_len(sizeof(client_addr)),
 	client_addr(),
-	fd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)),
-	disconnected(false),
-	server(srv)
+	server(srv),
+	server_error(false),
+	expiry(_expiry)
 {
-	if (fd < 0)
-	{
-		throw std::invalid_argument(strerror(errno));
-	}
 	// setting the new client socket as previous
 	// change client socket to non-blocking mode
-	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+	if (fcntl(getFd(), F_SETFL, O_NONBLOCK) == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
 }
 
 ClientConnection::ClientConnection(ClientConnection const &other):
+	BaseFile(other),
 	addr_len(other.addr_len),
 	client_addr(other.client_addr),
-	fd(dup(other.fd)),
-	disconnected(other.disconnected),
 	server(new Server(*other.server)),
 	buffer(other.buffer),
-	request(other.request)
+	request(other.request),
+	server_error(other.server_error),
+	expiry(other.expiry)
 {}
 
 ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
@@ -69,24 +65,19 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 	{
 		addr_len = other.addr_len;
 		client_addr = other.client_addr;
-		this->fd = dup(other.fd);
-		this->disconnected = other.disconnected;
+		BaseFile::operator=(other);
 		this->buffer = other.buffer;
 		this->request = other.request;
 		delete this->server;
 		this->server = new Server(*other.server);
+		this->server_error = other.server_error;
+		this->expiry = other.expiry;
 	}
 	return (*this);
 }
 
 ClientConnection::~ClientConnection()
 {
-	close(fd);
-}
-
-int	ClientConnection::getFd() const
-{
-	return (fd);
 }
 
 const HttpRequest	&ClientConnection::getRequest() const
@@ -119,14 +110,14 @@ Server	*ClientConnection::getServer() const
 	return (server);
 }
 
-bool	ClientConnection::isDisconnected() const
+void	ClientConnection::setServerError(bool error)
 {
-	return disconnected;
+	server_error = error;
 }
 
-void ClientConnection::setDisconnected(bool value)
+time_t	ClientConnection::getExpiry() const
 {
-	disconnected = value;
+	return expiry;
 }
 
 void	ClientConnection::appendToBuffer(char const *data, size_t size)
@@ -207,7 +198,7 @@ std::string	ClientConnection::readFileContent(const std::string &path) const
 	return ss.str();
 }
 
-void	ClientConnection::sendErrorResponse(int status_code,
+void	ClientConnection::sendErrorResponse(StatusCode status_code,
 					const std::string &status_text,
 					const std::string &error_file,
 					const std::vector<std::string> &allow_methods)
@@ -264,6 +255,13 @@ void	ClientConnection::makeResponse()
 {
 	try
 	{
+		if (server_error)
+		{
+			sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
+				server->getErrorPage(INTERNAL_SERVER_ERROR),
+				std::vector<std::string>());
+			return;
+		}
 		if (request.body_too_large)
 		{
 			sendErrorResponse(PAYLOAD_TOO_LARGE, "Payload Too Large",
@@ -355,7 +353,7 @@ void	ClientConnection::makeResponse()
 
 			if (unlink(("tmp/" + filename).c_str()) == -1)
 			{
-				int code = errno == ENOENT ? RESOURCE_NOT_FOUND : INTERNAL_SERVER_ERROR;
+				StatusCode code = errno == ENOENT ? RESOURCE_NOT_FOUND : INTERNAL_SERVER_ERROR;
 				sendErrorResponse(code, "Internal Server Error",
 					server->getErrorPage(code),
 					std::vector<std::string>());
@@ -431,14 +429,16 @@ void	ClientConnection::makeResponse()
 bool	ClientConnection::sendResponse()
 {
 	if (res_buffer.empty())
-		return (true);
+	{
+		return true;
+	}
 
-	ssize_t	n = write(getFd(), res_buffer.c_str(), res_buffer.size());
-	if (n == -1)
+	ssize_t	bytes_written = write(getFd(), res_buffer.c_str(), res_buffer.size());
+	if (bytes_written == -1)
 	{
 		return false;
 	}
-	res_buffer.erase(0, static_cast<size_t>(n));
+	res_buffer.erase(0, static_cast<size_t>(bytes_written));
 	return (res_buffer.empty());
 }
 

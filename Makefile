@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/08/11 18:25:19 by cgoh             ###   ########.fr        #
+#    Updated: 2025/08/17 21:53:12 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -14,7 +14,8 @@ NAME_S	=	webserv
 
 SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp\
             cgi_handler.cpp cgi_utils.cpp Epoll.cpp ClientConnection.cpp\
-            HttpRequest.cpp HttpResponse.cpp TmpDirCleaner.cpp
+            HttpRequest.cpp HttpResponse.cpp TmpDirCleaner.cpp BaseFile.cpp\
+            Timer.cpp
 
 SRC_DIR	=	.
 SRC_S	=	$(patsubst %.cpp,$(SRC_DIR)/%.cpp,$(SRC_F_S))

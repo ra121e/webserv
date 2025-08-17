@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/14 16:15:28 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/17 22:34:21 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,21 +17,21 @@
 # include "HttpResponse.hpp"
 # include "cgi_handler.hpp"
 # include "Server.hpp"
+#include <ctime>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string>
 #include <sys/socket.h>
+#include "BaseFile.hpp"
 
-class ClientConnection
+class ClientConnection : public BaseFile
 {
 	public:
-		ClientConnection();
-		ClientConnection(int server_fd, Server *srv);
+		ClientConnection(int server_fd, Server *srv, time_t _expiry);
 		ClientConnection(ClientConnection const &other);
 		ClientConnection	&operator=(ClientConnection const &other);
 		~ClientConnection();
 
-		int	getFd() const;
 		const HttpRequest	&getRequest() const;
 		const std::string	&getBuffer() const;
 
@@ -39,8 +39,8 @@ class ClientConnection
 		const std::string	&getResponseBuffer() const;
 		const std::string& getHost() const;
 		Server	*getServer() const;
-		bool	isDisconnected() const;
-		void	setDisconnected(bool value);
+		void	setServerError(bool error);
+		time_t	getExpiry() const;
 
 		void	appendToBuffer(char const *data, size_t size);
 		bool	parseRequest();
@@ -51,15 +51,15 @@ class ClientConnection
 	private:
 		socklen_t			addr_len;
 		struct sockaddr_in	client_addr;
-		int					fd;
-		bool				disconnected;
 		Server				*server;
 		std::string			host;
 		std::string			buffer;
 		std::string			res_buffer;
 		HttpRequest			request;
 		HttpResponse		response;
-		enum
+		bool				server_error;
+		time_t				expiry;
+		enum StatusCode
 		{
 			OK = 200,
 			MOVED_PERMANENTLY = 301,
@@ -72,11 +72,11 @@ class ClientConnection
 		};
 
 		std::string	readFileContent(const std::string &path) const;
-		void		sendErrorResponse(int status_code,
+		void		sendErrorResponse(StatusCode status_code,
                                         const std::string &status_text,
                                         const std::string &error_file,
                                         const std::vector<std::string> &allow_methods);
-		std::string	makeIndexof(std::string const &path_dir, std::string const &uri);
+		static std::string	makeIndexof(std::string const &path_dir, std::string const &uri);
 		static std::string	getFileExtension(const std::string& filepath);
 };
 

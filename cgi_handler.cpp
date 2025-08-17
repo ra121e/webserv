@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/17 17:09:41 by apoh              #+#    #+#             */
-/*   Updated: 2025/08/09 16:43:00 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/17 19:29:49 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -286,7 +286,7 @@ int run_cgi_script(ClientConnection &client, const std::string &script_path, con
 		
 		// Add pipe_stdout[0] to epoll instance with edge-triggered read monitoring
 		struct epoll_event event = {};
-		event.events = EPOLLIN | EPOLLET; // READ flag and changes state when there are events to be read // 
+		event.events = EPOLLIN; // READ flag and changes state when there are events to be read // 
 		event.data.fd = pipe_stdout[0]; // fd to be monitored is pipe_stdout // 
 		if (epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_stdout[0], &event) == -1) // add to epoll // 
 		{

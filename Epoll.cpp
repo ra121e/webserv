@@ -1,48 +1,40 @@
 #include "Epoll.hpp"
-#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <exception>
 #include <map>
-#include <memory>
 #include <stdexcept>
 #include <sys/epoll.h>
-#include <vector>
 #include <fcntl.h>
-#include <iostream>
+#include <sys/timerfd.h>
+#include "Timer.hpp"
 
-Epoll::Epoll(int _fd): fd(_fd)
+Epoll::Epoll(int _fd): BaseFile(_fd), events()
 {
-	if (fd == -1)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
 }
 
 Epoll::~Epoll()
 {
-	close(fd);
 	for (std::map<int, ClientConnection*>::iterator it = clients.begin(); it != clients.end(); ++it)
 	{
 		delete it->second;
 	}
 }
 
-int	Epoll::getFd() const
+bool	Epoll::TimeGreater::operator()(ClientConnection* a, ClientConnection* b) const
 {
-	return fd;
+	return a->getExpiry() > b->getExpiry();
 }
 
 void	Epoll::addEventListener(Server* server, int listen_fd)
 {
 	// set server fd and event into event struct (its like "entry sheet" or "application form")
 	struct epoll_event	event = {};
-	event.events = EPOLLIN | EPOLLET;
+	event.events = EPOLLIN;
 	event.data.fd = listen_fd;
 
 	// registration event into epoll
-	if (epoll_ctl(fd, EPOLL_CTL_ADD, listen_fd, &event) == -1)
+	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, listen_fd, &event) == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
@@ -53,30 +45,31 @@ void	Epoll::addEventListener(Server* server, int listen_fd)
 void	Epoll::addClient(int server_fd)
 {
 	Server				*server = servers[server_fd];
-	ClientConnection	*client = new ClientConnection(server_fd, server);
+	ClientConnection	*client = new ClientConnection(server_fd, server, time(NULL) + TIMEOUT);
 
 	struct epoll_event	event = {};
-	event.events = EPOLLIN | EPOLLET;
+	event.events = EPOLLIN;
 	event.data.fd = client->getFd();
 
 	// registration the client socket into epoll
-	if (epoll_ctl(fd, EPOLL_CTL_ADD, client->getFd(), &event) == -1)
+	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, client->getFd(), &event) == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
 	client->retrieveHost();
 	clients[client->getFd()] = client;
+	expiry_queue.push(client);
 }
 
 void Epoll::modifyEventListener(ClientConnection *client) const
 {
 	// set server fd and event into event struct (its like "entry sheet" or "application form")
 	struct epoll_event event = {};
-	event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+	event.events = EPOLLOUT;
 	event.data.fd = client->getFd();
 
 	// registration event into epoll
-	if (epoll_ctl(fd, EPOLL_CTL_MOD, client->getFd(), &event) == -1)
+	if (epoll_ctl(getFd(), EPOLL_CTL_MOD, client->getFd(), &event) == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
@@ -85,35 +78,20 @@ void Epoll::modifyEventListener(ClientConnection *client) const
 void	Epoll::handleEvents()
 {
 	// ask kernel of event happening
-	int	num_events = epoll_wait(fd, events, MAX_EVENTS, -1);
+	int	num_events = epoll_wait(getFd(), events, MAX_EVENTS, -1);
 	if (num_events == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
 	// event check
-	for (size_t i = 0; i < static_cast<size_t>(num_events); ++i)
+	for (int i = 0; i < num_events; ++i)
 	{
 		int current_fd = events[i].data.fd;
 		std::map<int, Server*>::iterator	it = servers.find(current_fd);
 		// new client access event
 		if (it != servers.end())
 		{
-			// generate new fd for all of queing new clients
-			while (true)
-			{
-				try
-				{
-					addClient(current_fd);
-				}
-				catch (const std::exception&)
-				{
-					if (errno == EAGAIN)
-					{
-						break;
-					}
-					throw;
-				}
-			}
+			addClient(current_fd);
 		}
 		else
 		{
@@ -143,22 +121,21 @@ void	Epoll::handleEvents()
 				ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
 				if (bytes_read == 0)
 				{
-					client->setDisconnected(true);
-				}
-				else if (bytes_read == -1)
-				{
-					continue;
-				}
-				client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
-				if (!client->parseRequest())
-				{
-					continue; // Not enough data to parse the request
-				}
-				if (client->isDisconnected())
-				{
 					delete client;
 					clients.erase(current_fd);
-					continue;
+					continue; // Client disconnected
+				}
+				if (bytes_read == -1)
+				{
+					client->setServerError(true);
+				}
+				else
+				{
+					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
+					if (!client->parseRequest())
+					{
+						continue; // Not enough data to parse the request
+					}
 				}
 				client->makeResponse();
 				modifyEventListener(client);
@@ -172,5 +149,19 @@ void	Epoll::handleEvents()
 				}
 			}
 		}
+	}
+}
+
+void	Epoll::addTimer()
+{
+	Timer	timer;
+
+	struct epoll_event event = {};
+	event.events = EPOLLIN;
+	event.data.fd = timer.getFd();
+
+	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, timer.getFd(), &event) == -1)
+	{
+		throw std::runtime_error(strerror(errno));
 	}
 }

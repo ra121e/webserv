@@ -55,7 +55,6 @@ void	Network::setupListener()
 {
 	struct addrinfo	hints = {};
 	struct addrinfo	*res = NULL;
-	const int	BACKLOG = 1024;
 	int	yes = 1;
 
 	hints.ai_family = AF_UNSPEC;
@@ -85,7 +84,7 @@ void	Network::setupListener()
 			close(socket_fd);
 			continue;
 		}
-		if (listen(socket_fd, BACKLOG) < 0)
+		if (listen(socket_fd, SOMAXCONN) < 0)
 		{
 			close(socket_fd);
 			continue;
