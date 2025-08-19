@@ -1,11 +1,18 @@
 #include "TmpDirCleaner.hpp"
+#include <cstring>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <cerrno>
+#include <stdexcept>
 
 TmpDirCleaner::TmpDirCleaner(const std::string &directory): dir(directory)
 {
+	if (mkdir(directory.c_str(), 0755) == -1 && errno != EEXIST)
+	{
+		throw std::runtime_error("Failed to create temporary directory: " + std::string(strerror(errno)));
+	}
 }
 
 TmpDirCleaner::~TmpDirCleaner()

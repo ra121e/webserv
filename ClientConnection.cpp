@@ -33,14 +33,14 @@ static const char* const	POST = "POST";
 static const char* const	DELETE = "DELETE";
 
 ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
-	BaseFile(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len)),
 	addr_len(sizeof(client_addr)),
 	client_addr(),
 	server(srv),
+	expiry(_expiry),
 	server_error(false),
-	expiry(_expiry)
+	timed_out(false)
 {
-	// setting the new client socket as previous
+	setFd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len));
 	// change client socket to non-blocking mode
 	if (fcntl(getFd(), F_SETFL, O_NONBLOCK) == -1)
 	{
@@ -55,8 +55,9 @@ ClientConnection::ClientConnection(ClientConnection const &other):
 	server(new Server(*other.server)),
 	buffer(other.buffer),
 	request(other.request),
+	expiry(other.expiry),
 	server_error(other.server_error),
-	expiry(other.expiry)
+	timed_out(other.timed_out)
 {}
 
 ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
@@ -68,10 +69,11 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 		BaseFile::operator=(other);
 		this->buffer = other.buffer;
 		this->request = other.request;
+		this->expiry = other.expiry;
 		delete this->server;
 		this->server = new Server(*other.server);
 		this->server_error = other.server_error;
-		this->expiry = other.expiry;
+		this->timed_out = other.timed_out;
 	}
 	return (*this);
 }
@@ -113,6 +115,16 @@ Server	*ClientConnection::getServer() const
 void	ClientConnection::setServerError(bool error)
 {
 	server_error = error;
+}
+
+void	ClientConnection::setTimedOut(bool timeout)
+{
+	timed_out = timeout;
+}
+
+void	ClientConnection::setExpiry(time_t _expiry)
+{
+	expiry = _expiry;
 }
 
 time_t	ClientConnection::getExpiry() const
@@ -259,6 +271,13 @@ void	ClientConnection::makeResponse()
 		{
 			sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
 				server->getErrorPage(INTERNAL_SERVER_ERROR),
+				std::vector<std::string>());
+			return;
+		}
+		if (timed_out)
+		{
+			sendErrorResponse(REQUEST_TIMEOUT, "Request Timeout",
+				server->getErrorPage(REQUEST_TIMEOUT),
 				std::vector<std::string>());
 			return;
 		}
@@ -446,17 +465,13 @@ void	ClientConnection::retrieveHost()
 {
 	char host_buffer[NI_MAXHOST];
 
-	if (getnameinfo(reinterpret_cast<struct sockaddr*>(&client_addr),
-	addr_len,
-	static_cast<char *>(host_buffer),
-	sizeof(host_buffer),
-	NULL,
-	0,
-	NI_NUMERICHOST) != 0)
+	int gni_value = getnameinfo(reinterpret_cast<struct sockaddr*>(&client_addr),
+		addr_len, host_buffer, sizeof(host_buffer), NULL, 0, NI_NUMERICHOST);
+	if (gni_value != 0)
 	{
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error("getnameinfo: " + std::string(gai_strerror(gni_value)));
 	}
-	host = static_cast<char *>(host_buffer);
+	host = host_buffer;
 }
 
 std::string ClientConnection::getFileExtension(const std::string& filepath)

@@ -60,6 +60,7 @@ std::string	HttpResponse::makeString() const
 	std::stringstream	ss;
 
 	ss << "HTTP/1.1 " << status_code << " " << status_message << "\r\n";
+	ss << "Connection: close\r\n";
 	if (headers.find("Content-Length") == headers.end())
 		ss << "Content-Length: " << body.size() << "\r\n";
 

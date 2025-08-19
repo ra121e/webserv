@@ -2,11 +2,14 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <map>
 #include <stdexcept>
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <sys/timerfd.h>
+#include <sys/types.h>
+#include "ConnectionExpiration.hpp"
 #include "Timer.hpp"
 
 Epoll::Epoll(int _fd): BaseFile(_fd), events()
@@ -19,11 +22,6 @@ Epoll::~Epoll()
 	{
 		delete it->second;
 	}
-}
-
-bool	Epoll::TimeGreater::operator()(ClientConnection* a, ClientConnection* b) const
-{
-	return a->getExpiry() > b->getExpiry();
 }
 
 void	Epoll::addEventListener(Server* server, int listen_fd)
@@ -45,7 +43,8 @@ void	Epoll::addEventListener(Server* server, int listen_fd)
 void	Epoll::addClient(int server_fd)
 {
 	Server				*server = servers[server_fd];
-	ClientConnection	*client = new ClientConnection(server_fd, server, time(NULL) + TIMEOUT);
+	time_t				current_time = time(NULL);
+	ClientConnection	*client = new ClientConnection(server_fd, server, current_time + TIMEOUT);
 
 	struct epoll_event	event = {};
 	event.events = EPOLLIN;
@@ -58,7 +57,8 @@ void	Epoll::addClient(int server_fd)
 	}
 	client->retrieveHost();
 	clients[client->getFd()] = client;
-	expiry_queue.push(client);
+	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + TIMEOUT));
+	timer.setTimer(TIMEOUT);
 }
 
 void Epoll::modifyEventListener(ClientConnection *client) const
@@ -92,6 +92,33 @@ void	Epoll::handleEvents()
 		if (it != servers.end())
 		{
 			addClient(current_fd);
+		}
+		else if (current_fd == timer.getFd())
+		{
+			uint64_t expirations = 0;
+			read(timer.getFd(), &expirations, sizeof(expirations));
+
+			while (!expiry_queue.empty() && expiry_queue.top().getExpiration() <= time(NULL))
+			{
+				ConnectionExpiration	exp = expiry_queue.top();
+				expiry_queue.pop();
+				std::map<int, ClientConnection*>::iterator client_it = clients.find(exp.getFd());
+				if (client_it != clients.end())
+				{
+					ClientConnection* client = client_it->second;
+					if (client->getExpiry() != exp.getExpiration())
+					{
+						continue;
+					}
+					client->setTimedOut(true);
+					client->makeResponse();
+					modifyEventListener(client);
+				}
+			}
+			if (!expiry_queue.empty())
+			{
+				timer.setTimer(expiry_queue.top().getExpiration() - time(NULL));
+			}
 		}
 		else
 		{
@@ -131,6 +158,10 @@ void	Epoll::handleEvents()
 				}
 				else
 				{
+					time_t current_time = time(NULL);
+					expiry_queue.push(ConnectionExpiration(current_fd, current_time + TIMEOUT));
+					client->setExpiry(current_time + TIMEOUT);
+					timer.setTimer(expiry_queue.top().getExpiration() - current_time);
 					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
 					if (!client->parseRequest())
 					{
@@ -154,8 +185,6 @@ void	Epoll::handleEvents()
 
 void	Epoll::addTimer()
 {
-	Timer	timer;
-
 	struct epoll_event event = {};
 	event.events = EPOLLIN;
 	event.data.fd = timer.getFd();

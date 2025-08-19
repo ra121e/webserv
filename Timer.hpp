@@ -14,6 +14,8 @@ public:
 	Timer(const Timer& other);
 	Timer& operator=(const Timer& other);
 	~Timer();
+
+	void setTimer(time_t duration) const;
 };
 
 #endif // TIMER_HPP

@@ -7,12 +7,14 @@ private:
 	int fd; // file descriptor
 
 public:
+	BaseFile();
 	BaseFile(int _fd);
 	BaseFile(const BaseFile& other);
 	BaseFile& operator=(const BaseFile& other);
 	virtual ~BaseFile() = 0;
 
-	int getFd() const;
+	int		getFd() const;
+	void	setFd(int _fd);
 };
 
 #endif

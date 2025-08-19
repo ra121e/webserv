@@ -55,6 +55,7 @@ int	main(int argc, char **argv)
 			}
 		}
 		std::signal(SIGINT, handle_sigint_c);
+		epoll.addTimer();
 		while (g_run != 0)
 		{
 			epoll.handleEvents();

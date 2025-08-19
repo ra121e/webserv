@@ -37,6 +37,10 @@ BaseFile& BaseFile::operator=(const BaseFile& other)
 	return *this;
 }
 
+BaseFile::BaseFile() : fd(-1)
+{
+}
+
 BaseFile::~BaseFile()
 {
 	close(fd);
@@ -45,4 +49,13 @@ BaseFile::~BaseFile()
 int BaseFile::getFd() const
 {
 	return fd;
+}
+
+void BaseFile::setFd(int _fd)
+{
+	fd = _fd;
+	if (fd < 0)
+	{
+		throw std::invalid_argument("Setting invalid file descriptor in BaseFile");
+	}
 }

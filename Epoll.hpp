@@ -11,6 +11,8 @@
 #include "ClientConnection.hpp"
 #include "Server.hpp"
 #include "BaseFile.hpp"
+#include "Timer.hpp"
+#include "ConnectionExpiration.hpp"
 
 class Epoll : public BaseFile
 {
@@ -19,12 +21,9 @@ private:
 	std::map<int, ClientConnection*>	clients;
 	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
+	Timer	timer;
 	static const time_t	TIMEOUT = 10;
-	struct TimeGreater
-	{
-		bool operator()(ClientConnection* a, ClientConnection* b) const;
-	};
-	std::priority_queue<ClientConnection*, std::vector<ClientConnection*>, TimeGreater>	expiry_queue;
+	std::priority_queue<ConnectionExpiration, std::vector<ConnectionExpiration>, std::greater<ConnectionExpiration> >	expiry_queue;
 
 	Epoll(const Epoll& other);
 	Epoll&	operator=(const Epoll& other);

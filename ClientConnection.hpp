@@ -40,6 +40,8 @@ class ClientConnection : public BaseFile
 		const std::string& getHost() const;
 		Server	*getServer() const;
 		void	setServerError(bool error);
+		void	setTimedOut(bool timeout);
+		void	setExpiry(time_t _expiry);
 		time_t	getExpiry() const;
 
 		void	appendToBuffer(char const *data, size_t size);
@@ -57,8 +59,9 @@ class ClientConnection : public BaseFile
 		std::string			res_buffer;
 		HttpRequest			request;
 		HttpResponse		response;
-		bool				server_error;
 		time_t				expiry;
+		bool				server_error;
+		bool				timed_out;
 		enum StatusCode
 		{
 			OK = 200,
@@ -67,6 +70,7 @@ class ClientConnection : public BaseFile
 			BAD_REQUEST = 400,
 			RESOURCE_NOT_FOUND = 404,
 			METHOD_NOT_ALLOWED = 405,
+			REQUEST_TIMEOUT = 408,
 			PAYLOAD_TOO_LARGE = 413,
 			INTERNAL_SERVER_ERROR = 500
 		};
