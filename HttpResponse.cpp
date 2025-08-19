@@ -13,33 +13,6 @@
 #include "HttpResponse.hpp"
 #include <sstream>
 
-HttpResponse::HttpResponse():
-	status_code(OK),
-	status_message("OK")
-{}
-
-HttpResponse::HttpResponse(HttpResponse const &other):
-	status_code(other.status_code),
-	status_message(other.status_message),
-	headers(other.headers),
-	body(other.body)
-{}
-
-HttpResponse	&HttpResponse::operator=(HttpResponse const &other)
-{
-	if (this != &other)
-	{
-		this->status_code = other.status_code;
-		this->status_message = other.status_message;
-		this->headers = other.headers;
-		this->body = other.body;
-	}
-	return (*this);
-}
-
-HttpResponse::~HttpResponse()
-{}
-
 void	HttpResponse::addHeader(std::string const &key, std::string const &value)
 {
 	headers[key] = value;

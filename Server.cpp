@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Network.hpp"
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
@@ -11,7 +12,7 @@
 #include <vector>
 #include <fcntl.h>
 
-Server::Server()
+Server::Server() : client_max_body_size()
 {
 	Location cgiLoc;
 	cgiLoc.setAlias("cgi-bin/"); // actual disk path to CGI scripts
@@ -33,6 +34,11 @@ Server&	Server::operator=(const Server& other)
 {
 	if (this != &other)
 	{
+		for (std::vector<Network*>::const_iterator it = networks.begin(); it != networks.end(); ++it)
+		{
+			delete *it;
+		}
+		networks.clear();
 		for (std::vector<Network*>::const_iterator it = other.networks.begin(); it != other.networks.end(); ++it)
 		{
 			networks.push_back(new Network(**it));

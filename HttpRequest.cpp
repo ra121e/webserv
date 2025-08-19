@@ -13,38 +13,7 @@
 #include "HttpRequest.hpp"
 
 HttpRequest::HttpRequest():
-	is_header_parse(false), waiting_for_body(false), body_too_large(false), header_end_pos(0), content_length(0)
-{}
-HttpRequest::HttpRequest(HttpRequest const &other):
-	method(other.method),
-	uri(other.uri),
-	version(other.version),
-	headers(other.headers),
-	body(other.body),
-	is_header_parse(other.is_header_parse),
-	waiting_for_body(other.waiting_for_body),
-	body_too_large(other.body_too_large),
-	header_end_pos(other.header_end_pos),
-	content_length(other.content_length)
-{}
-
-HttpRequest	&HttpRequest::operator=(HttpRequest const &other)
-{
-	if (this != &other)
-	{
-		this->method = other.method;
-		this->uri = other.uri;
-		this->version = other.version;
-		this->headers = other.headers;
-		this->body = other.body;
-		this->is_header_parse = other.is_header_parse;
-		this->waiting_for_body = other.waiting_for_body;
-		this->body_too_large = other.body_too_large;
-		this->header_end_pos = other.header_end_pos;
-		this->content_length = other.content_length;
-	}
-	return (*this);
-}
-
-HttpRequest::~HttpRequest()
+	is_header_parse(false), waiting_for_body(false), body_too_large(false),
+	is_bad(false), content_length_missing(false), header_end_pos(0),
+	content_length(0)
 {}

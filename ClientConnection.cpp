@@ -141,6 +141,11 @@ bool	ClientConnection::parseRequest()
 {
 	if (!request.is_header_parse)
 	{
+		if (buffer.size() > MAX_HEADER_SIZE)
+		{
+			request.is_bad = true;
+			return true; // Bad request, too large header
+		}
 		request.header_end_pos	= buffer.find("\r\n\r\n");
 		if (request.header_end_pos == std::string::npos)
 		{
@@ -182,6 +187,11 @@ bool	ClientConnection::parseRequest()
 		// body part
 		buffer.erase(0, request.header_end_pos + 4); // Remove header part from buffer
 		std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
+		if (it == request.headers.end())
+		{
+			request.content_length_missing = true;
+			return true; // Bad request, no Content-Length header
+		}
 		std::stringstream	ss_content_length(it->second);
 		ss_content_length >> request.content_length;
 		if (request.content_length > getServer()->getClientMaxBodySize())
@@ -200,7 +210,7 @@ bool	ClientConnection::parseRequest()
 	return true;
 }
 
-std::string	ClientConnection::readFileContent(const std::string &path) const
+std::string	ClientConnection::readFileContent(const std::string &path)
 {
 	std::ifstream file(path.c_str());
 	if (!file)
@@ -267,6 +277,13 @@ void	ClientConnection::makeResponse()
 {
 	try
 	{
+		if (request.is_bad)
+		{
+			sendErrorResponse(BAD_REQUEST, "Bad Request",
+				server->getErrorPage(BAD_REQUEST),
+				std::vector<std::string>());
+			return;
+		}
 		if (server_error)
 		{
 			sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
@@ -338,6 +355,13 @@ void	ClientConnection::makeResponse()
 		}
 		if (request.method == POST)
 		{
+			if (request.content_length_missing)
+			{
+				sendErrorResponse(CONTENT_LENGTH_MISSING, "Content-Length Missing",
+					server->getErrorPage(CONTENT_LENGTH_MISSING),
+					std::vector<std::string>());
+				return;
+			}
 			const std::string& FILENAME_FIELD = "filename=\"";
 			size_t	filename_start_pos = request.body.find(FILENAME_FIELD);
 			size_t	filename_end_pos = request.body.find('\"', filename_start_pos + FILENAME_FIELD.size());
@@ -435,9 +459,8 @@ void	ClientConnection::makeResponse()
 			}
 		}
 	}
-	catch (const std::runtime_error &e)
+	catch (const std::runtime_error&)
 	{
-		std::cerr << e.what() << "\n";
 		sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
 			server->getErrorPage(RESOURCE_NOT_FOUND),
 				std::vector<std::string>());

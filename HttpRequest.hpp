@@ -21,9 +21,6 @@ class HttpRequest
 {
 	public:
 		HttpRequest();
-		HttpRequest(HttpRequest const &other);
-		HttpRequest	&operator=(HttpRequest const &other);
-		~HttpRequest();
 
 		std::string	method;
 		std::string	uri;
@@ -35,6 +32,8 @@ class HttpRequest
 		bool	is_header_parse;
 		bool	waiting_for_body;
 		bool	body_too_large;
+		bool	is_bad;
+		bool	content_length_missing;
 		size_t	header_end_pos;
 		size_t	content_length;
 	private:

@@ -15,22 +15,14 @@
 
 # include <string>
 # include <map>
-# include <sstream>
 
 class HttpResponse
 {
-	private:
-		static const int OK = 200;
 	public:
 		int									status_code;
 		std::string							status_message;
 		std::map<std::string, std::string>	headers;
 		std::string							body;
-
-		HttpResponse();
-		HttpResponse(HttpResponse const &other);
-		HttpResponse	&operator=(HttpResponse const &other);
-		~HttpResponse();
 
 		void	addHeader(std::string const &key, std::string const &value);
 		void	setBody(std::string const &body_content, std::string const &content_type);

@@ -17,6 +17,7 @@
 # include "HttpResponse.hpp"
 # include "cgi_handler.hpp"
 # include "Server.hpp"
+#include <cstddef>
 #include <ctime>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -71,11 +72,13 @@ class ClientConnection : public BaseFile
 			RESOURCE_NOT_FOUND = 404,
 			METHOD_NOT_ALLOWED = 405,
 			REQUEST_TIMEOUT = 408,
+			CONTENT_LENGTH_MISSING = 411,
 			PAYLOAD_TOO_LARGE = 413,
 			INTERNAL_SERVER_ERROR = 500
 		};
+		static const std::size_t	MAX_HEADER_SIZE = 8192;
 
-		std::string	readFileContent(const std::string &path) const;
+		static std::string	readFileContent(const std::string &path);
 		void		sendErrorResponse(StatusCode status_code,
                                         const std::string &status_text,
                                         const std::string &error_file,
