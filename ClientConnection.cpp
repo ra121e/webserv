@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/17 23:01:36 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/25 20:40:21 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <ios>
@@ -285,7 +286,7 @@ std::string	ClientConnection::makeIndexof(std::string const &path_dir, std::stri
 	return (html.str());
 }
 
-void	ClientConnection::makeResponse()
+void	ClientConnection::makeResponse(Epoll& epoll)
 {
 	try
 	{
@@ -334,6 +335,11 @@ void	ClientConnection::makeResponse()
 					loc.getMethods());
 			return ;
 		}
+		if (loc.is_cgi_extension(request.uri))
+		{
+			run_cgi_script(request.uri, epoll);
+			return;
+		}
 		// if (is_cgi_script(request.uri))
 		// {
 		// 	std::cout << "getAlias : " << loc.getAlias() << std::endl;
@@ -379,10 +385,6 @@ void	ClientConnection::makeResponse()
 				size_t	body_start_pos = request.body.find("\r\n\r\n");
 				size_t	body_end_pos = request.body.find("\r\n", body_start_pos + 4);
 				file << request.body.substr(body_start_pos + 4, body_end_pos - body_start_pos - 4);
-				if (loc.is_cgi_extension(filename))
-				{
-					run_cgi_script(filepath);
-				}
 			}
 			else
 			{
@@ -517,79 +519,44 @@ std::string ClientConnection::getFileExtension(const std::string& filepath)
 	return filepath.substr(pos + 1);
 }
 
-void	ClientConnection::run_cgi_script(const std::string& script_path)
+void	ClientConnection::run_cgi_script(const std::string& script_path, Epoll& epoll)
 { 
-	CGI cgi;
+	CGI* cgi = new CGI;
 
-	cgi.add_env("REQUEST_METHOD", request.method);
-	cgi.add_env("QUERY_STRING", getQueryString(request.uri));
-	cgi.add_env("CONTENT_LENGTH", getContentLength(request.headers));
-	cgi.add_env("CONTENT_TYPE", getContentType(request.headers));
-	cgi.add_env("SCRIPT_NAME", getScriptName(request.uri));
-	cgi.add_env("SERVER_NAME", server_host);
-	cgi.add_env("SERVER_PORT", server_port);
-	cgi.add_env("SERVER_PROTOCOL", request.version);
-	cgi.add_env("REMOTE_ADDR", host);
-	cgi.add_env("HTTP_USER_AGENT", getUserAgent(request.headers));
-	cgi.add_env("HTTP_COOKIE", getCookie(request.headers));
-	cgi.add_env("HTTP_REFERER", getReferer(request.headers));
-	cgi.add_env("GATEWAY_INTERFACE", "CGI/1.1");
-	cgi.add_env("PATH_INFO", getPathInfo(script_path));
-	
-	cgi.convert_env_map_to_envp(); // function to copy all the env_map variables into a environment so that i can run execve // 
+	cgi->add_env("REQUEST_METHOD", request.method);
+	cgi->add_env("QUERY_STRING", getQueryString(request.uri));
+	cgi->add_env("CONTENT_LENGTH", getContentLength(request.headers));
+	cgi->add_env("CONTENT_TYPE", getContentType(request.headers));
+	cgi->add_env("SCRIPT_NAME", getScriptName(request.uri));
+	cgi->add_env("SERVER_NAME", server_host);
+	cgi->add_env("SERVER_PORT", server_port);
+	cgi->add_env("SERVER_PROTOCOL", request.version);
+	cgi->add_env("REMOTE_ADDR", host);
+	cgi->add_env("HTTP_USER_AGENT", getUserAgent(request.headers));
+	cgi->add_env("HTTP_COOKIE", getCookie(request.headers));
+	cgi->add_env("HTTP_REFERER", getReferer(request.headers));
+	cgi->add_env("GATEWAY_INTERFACE", "CGI/1.1");
+	cgi->add_env("PATH_INFO", getPathInfo(script_path));
+
+	cgi->convert_env_map_to_envp(); // function to copy all the env_map variables into a environment so that i can run execve //
 
 	pid_t	pid = fork(); // forking to let the child inherit all the env_variables // 
-	if (pid == -1)
-	{
-		throw std::runtime_error("fork: " + std::string(strerror(errno)));
+	switch (pid) {
+		case -1:
+			throw std::runtime_error("fork: " + std::string(strerror(errno)));
+		case 0:
+			cgi->execute_cgi();
+			break;
+		default:
+			cgi->close_pipes();
+			epoll.addCgi(cgi->get_server_read_fd(), cgi);
+			epoll.addCgi(cgi->get_server_write_fd(), cgi);
 	}
-	if (pid == 0)
-	{
-		cgi.execute_cgi();
-	}
-	else
-	{
-		close(pipe_stdin[0]); // in the parent, not needed to read data from stdin //
-		close(pipe_stdout[1]); // in the parent, not needed to write data to stdout // 
-		if (req.method == "POST")
-		{
-			const std::string &body = req.body;
-			if (!body.empty())
-			{
-				if (write_all(pipe_stdin[1], body.c_str(), body.size()) == -1) // if post method, write data all to stdin // 
-				{
-					perror("Write to CGI stdin failed");
-					kill(pid, SIGKILL); // if failure, kill off the child and close all the pipes and free cgi_envp memory // 
-					close(pipe_stdin[1]);
-					close(pipe_stdout[0]);
-					free_envp(cgi_envp);
-					return (-1);
-				}
-			}
-		}
-		close(pipe_stdin[1]); // once data is written to stdin pipe, close off the pipe since no longer used // 
-		int epfd = epoll_create1(0); // create a new epoll fd to monitor events relating to pipe_stdout // 
-		if (epfd == -1)
-		{
-			perror("epoll_create1");
-			// Cleanup and return error
-			return (-1);
-		}
+}
 		
-		// Add pipe_stdout[0] to epoll instance with edge-triggered read monitoring
-		struct epoll_event event = {};
-		event.events = EPOLLIN; // READ flag and changes state when there are events to be read // 
-		event.data.fd = pipe_stdout[0]; // fd to be monitored is pipe_stdout // 
-		if (epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_stdout[0], &event) == -1) // add to epoll // 
-		{
-			perror("epoll_ctl ADD pipe_stdout");
-			close(epfd);
-			return (-1);
-		}
-		
-		// Set pipe_stdout[0] to non-blocking to properly use edge-triggered epoll
-		int flags = fcntl(pipe_stdout[0], F_GETFL, 0); // file access mode and status flags//
-		fcntl(pipe_stdout[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
+		// Set server_read_cgi_write_pipe[0] to non-blocking to properly use edge-triggered epoll
+		int flags = fcntl(server_read_cgi_write_pipe[0], F_GETFL, 0); // file access mode and status flags//
+		fcntl(server_read_cgi_write_pipe[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
 		
 		std::string cgi_output;
 		const int TIMEOUT_MS = 8000; // 3 seconds timeout
@@ -621,12 +588,12 @@ void	ClientConnection::run_cgi_script(const std::string& script_path)
 			}
 			else
 			{
-				if (events[0].data.fd == pipe_stdout[0])
+				if (events[0].data.fd == server_read_cgi_write_pipe[0])
 				{
 					while (true)
 					{
 						char buf[BUFFER_SIZE];
-						ssize_t bytes_read = read(pipe_stdout[0], buf, sizeof(buf));
+						ssize_t bytes_read = read(server_read_cgi_write_pipe[0], buf, sizeof(buf));
 						if (bytes_read == -1)
 						{
 							if (errno == EAGAIN)
@@ -655,7 +622,7 @@ void	ClientConnection::run_cgi_script(const std::string& script_path)
 				}
 			}
 		}
-		close(pipe_stdout[0]); // close pipe_stdout once data is read //
+		close(server_read_cgi_write_pipe[0]); // close server_read_cgi_write_pipe once data is read //
 		close(epfd); // close epoll fd as well //
 		
 		if (!timeout_occurred) // if timeout has not occured, we monitor the status flags // 
@@ -686,5 +653,3 @@ void	ClientConnection::run_cgi_script(const std::string& script_path)
 		free_envp(cgi_envp);
 		// Use cgi_output as the CGI script response content
 		std::cout << "Parent received:\n" << cgi_output << std::endl;
-	}
-}

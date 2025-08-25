@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/17 17:09:41 by apoh              #+#    #+#             */
-/*   Updated: 2025/08/17 19:29:49 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/25 13:32:10 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -203,10 +203,10 @@ std::string getPathInfo(const std::string &script_path)
 // 	(void) ac;
 // 	(void) av;
 // 	(void) envp;
-// 	int	pipe_stdin[2]; // parent to talk to child //
-// 	int	pipe_stdout[2]; // child to talk to parent //
+// 	int	server_write_cgi_read_pipe[2]; // parent to talk to child //
+// 	int	server_read_cgi_write_pipe[2]; // child to talk to parent //
 	
-// 	if (create_pipe(pipe_stdin) == -1 || create_pipe(pipe_stdout) == -1) // create pipes first //
+// 	if (create_pipe(server_write_cgi_read_pipe) == -1 || create_pipe(server_read_cgi_write_pipe) == -1) // create pipes first //
 // 		return (-1);
 // 	std::map<std::string, std::string> env_map; // hardcoding data. Expect this data to be taken from our classes or structure //
 // 	env_map["REQUEST_METHOD"] = "DELETE";
@@ -243,13 +243,13 @@ std::string getPathInfo(const std::string &script_path)
 // 	if (pid == 0) // child process //
 // 	{
 // 		// in the child process, we read from stdin pipe and writes to stdout pipe //
-// 		close(pipe_stdin[1]); // in the child we only read data from stdin, no write end is needed //
-// 		close(pipe_stdout[0]); // in the child, we only need to write data to stdout , no read end is needed //
+// 		close(server_write_cgi_read_pipe[1]); // in the child we only read data from stdin, no write end is needed //
+// 		close(server_read_cgi_write_pipe[0]); // in the child, we only need to write data to stdout , no read end is needed //
 		
-// 		dup2(pipe_stdin[0], STDIN_FILENO); // use dup2 on the read end of stdin //
-// 		dup2(pipe_stdout[1], STDOUT_FILENO); // use dup2 on the write end of stdout //
-// 		close(pipe_stdin[0]); // close off after successful dup //
-// 		close(pipe_stdout[1]); // close off after successful dup //
+// 		dup2(server_write_cgi_read_pipe[0], STDIN_FILENO); // use dup2 on the read end of stdin //
+// 		dup2(server_read_cgi_write_pipe[1], STDOUT_FILENO); // use dup2 on the write end of stdout //
+// 		close(server_write_cgi_read_pipe[0]); // close off after successful dup //
+// 		close(server_read_cgi_write_pipe[1]); // close off after successful dup //
 		
 // 		// creating paths to do execve //
 // 		const char *cgi_path = "/home/apoh/Documents/test/webserv/cgi-bin/my_cgi.cgi";
@@ -288,20 +288,20 @@ std::string getPathInfo(const std::string &script_path)
 // 	else // parent /i/
 // 	{
 // 		// so parent writes to stdin pipe and reads from stdout pipe //
-// 		close(pipe_stdin[0]); // in the parent, we dont need the read end from stdin //  
-// 		close(pipe_stdout[1]); // in the parent, we dont need the write end from stdout //
+// 		close(server_write_cgi_read_pipe[0]); // in the parent, we dont need the read end from stdin //  
+// 		close(server_read_cgi_write_pipe[1]); // in the parent, we dont need the write end from stdout //
 
 // 		const char *msg = "Hello from Parent!\n";
-// 		if (write_all(pipe_stdin[1], msg, ft_strlen(msg)) == -1) // if writing failed, we kill off the child process, the pipes, and free off memory // 
+// 		if (write_all(server_write_cgi_read_pipe[1], msg, ft_strlen(msg)) == -1) // if writing failed, we kill off the child process, the pipes, and free off memory // 
 // 		{
 // 			perror("Write to CGI stdin failed");
 // 			kill(pid, SIGKILL);
-// 			close(pipe_stdin[1]);
-// 			close(pipe_stdout[0]);
+// 			close(server_write_cgi_read_pipe[1]);
+// 			close(server_read_cgi_write_pipe[0]);
 // 			free_envp(cgi_envp);
 // 			return (1);
 // 		}
-// 		close(pipe_stdin[1]); // no writing is needed, so close first // 
+// 		close(server_write_cgi_read_pipe[1]); // no writing is needed, so close first // 
 		
 // 		std::string	cgi_output;
 // 		char	buf_parent[BUFFER_SIZE];
@@ -311,13 +311,13 @@ std::string getPathInfo(const std::string &script_path)
 // 		{
 // 			fd_set	readfds; // using select here but we using epoll so i figuring how it works // 
 // 			FD_ZERO(&readfds); // clears the set // 
-// 			FD_SET(pipe_stdout[0], &readfds); // adds the set to be monitored // 
+// 			FD_SET(server_read_cgi_write_pipe[0], &readfds); // adds the set to be monitored // 
 			
 // 			struct timeval	tv;
 // 			tv.tv_sec = TIMEOUT_SECONDS; // seconds //
 // 			tv.tv_usec = 0; // millisecs //
 			
-// 			int	retval = select(pipe_stdout[0] + 1, &readfds, NULL, NULL, &tv);
+// 			int	retval = select(server_read_cgi_write_pipe[0] + 1, &readfds, NULL, NULL, &tv);
 // 			if (retval == -1) // if error // 
 // 			{
 // 				perror("select");
@@ -329,9 +329,9 @@ std::string getPathInfo(const std::string &script_path)
 // 				kill(pid, SIGKILL); // kill off child process // 
 // 				break ;
 // 			}
-// 			if (FD_ISSET(pipe_stdout[0], &readfds)) // if pipe is ready to be read //
+// 			if (FD_ISSET(server_read_cgi_write_pipe[0], &readfds)) // if pipe is ready to be read //
 // 			{
-// 				bytes_read_parent = read(pipe_stdout[0], buf_parent, BUFFER_SIZE - 1);
+// 				bytes_read_parent = read(server_read_cgi_write_pipe[0], buf_parent, BUFFER_SIZE - 1);
 // 				if (bytes_read_parent == -1) // if read fails //
 // 				{
 // 					perror("read");
@@ -346,7 +346,7 @@ std::string getPathInfo(const std::string &script_path)
 // 			}
 			
 // 			std::cout << "Parent received:\n" << cgi_output; // result of output //
-// 			close(pipe_stdout[0]); // now can close stdout pipe //
+// 			close(server_read_cgi_write_pipe[0]); // now can close stdout pipe //
 			
 // 			int	status;
 // 			waitpid(pid, &status, 0);

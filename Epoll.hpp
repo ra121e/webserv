@@ -1,5 +1,6 @@
 #ifndef EPOLL_HPP
 #define EPOLL_HPP
+class Epoll;
 #include <functional>
 #include <map>
 #include <queue>
@@ -13,12 +14,14 @@
 #include "BaseFile.hpp"
 #include "Timer.hpp"
 #include "ConnectionExpiration.hpp"
+#include "CGI.hpp"
 
 class Epoll : public BaseFile
 {
 private:
 	std::map<int, Server*>	servers;
 	std::map<int, ClientConnection*>	clients;
+	std::map<int, CGI*>	cgis;
 	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
 	Timer	timer;
@@ -35,6 +38,7 @@ public:
 	void	addClient(int server_fd);
 	void	handleEvents();
 	void	addTimer();
+	void	addCgi(int cgi_fd, CGI* cgi);
 };
 
 #endif

@@ -22,6 +22,10 @@ Epoll::~Epoll()
 	{
 		delete it->second;
 	}
+	for (std::map<int, CGI*>::iterator it = cgis.begin(); it != cgis.end(); ++it)
+	{
+		delete it->second;
+	}
 }
 
 void	Epoll::addEventListener(Server* server, int listen_fd)
@@ -109,7 +113,7 @@ void	Epoll::handleEvents()
 						continue;
 					}
 					client->setTimedOut(true);
-					client->makeResponse();
+					client->makeResponse(*this);
 					modifyEventListener(client);
 				}
 			}
@@ -191,4 +195,17 @@ void	Epoll::addTimer()
 	{
 		throw std::runtime_error(strerror(errno));
 	}
+}
+
+void	Epoll::addCgi(int cgi_fd, CGI* cgi)
+{
+	struct epoll_event event = {};
+	event.events = EPOLLIN;
+	event.data.fd = cgi_fd;
+
+	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, cgi_fd, &event) == -1)
+	{
+		throw std::runtime_error(strerror(errno));
+	}
+	cgis[cgi_fd] = cgi;
 }

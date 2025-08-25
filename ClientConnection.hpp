@@ -6,16 +6,16 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/17 22:34:21 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/25 14:52:37 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CLIENTCONNECTION_HPP
 # define CLIENTCONNECTION_HPP
 
+class ClientConnection;
 # include "HttpRequest.hpp"
 # include "HttpResponse.hpp"
-#include "Location.hpp"
 # include "cgi_handler.hpp"
 # include "Server.hpp"
 #include <cstddef>
@@ -26,6 +26,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include "BaseFile.hpp"
+#include "Epoll.hpp"
 
 class ClientConnection : public BaseFile
 {
@@ -49,10 +50,10 @@ class ClientConnection : public BaseFile
 
 		void	appendToBuffer(char const *data, size_t size);
 		bool	parseRequest();
-		void	makeResponse();
+		void	makeResponse(Epoll& epoll);
 		bool	sendResponse();
 		void	retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len);
-		void	run_cgi_script(const std::string& script_path);
+		void	run_cgi_script(const std::string& script_path, Epoll& epoll);
 
 	private:
 		socklen_t			addr_len;
