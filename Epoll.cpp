@@ -42,9 +42,8 @@ void	Epoll::addEventListener(Server* server, int listen_fd)
 // set client fd and event to "application form"
 void	Epoll::addClient(int server_fd)
 {
-	Server				*server = servers[server_fd];
 	time_t				current_time = time(NULL);
-	ClientConnection	*client = new ClientConnection(server_fd, server, current_time + TIMEOUT);
+	ClientConnection	*client = new ClientConnection(server_fd, servers[server_fd], current_time + TIMEOUT);
 
 	struct epoll_event	event = {};
 	event.events = EPOLLIN;
@@ -55,7 +54,6 @@ void	Epoll::addClient(int server_fd)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
-	client->retrieveHost();
 	clients[client->getFd()] = client;
 	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + TIMEOUT));
 	timer.setTimer(TIMEOUT);

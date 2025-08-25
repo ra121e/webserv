@@ -24,9 +24,11 @@
 #include <iostream>
 #include <fcntl.h>
 #include <cerrno>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include "CGI.hpp"
 
 static const char* const	GET = "GET";
 static const char* const	POST = "POST";
@@ -35,17 +37,27 @@ static const char* const	DELETE = "DELETE";
 ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
 	addr_len(sizeof(client_addr)),
 	client_addr(),
+	server_addr_len(sizeof(server_addr)),
+	server_addr(),
 	server(srv),
 	expiry(_expiry),
 	server_error(false),
 	timed_out(false)
 {
-	setFd(accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len));
-	// change client socket to non-blocking mode
-	if (fcntl(getFd(), F_SETFL, O_NONBLOCK) == -1)
+	try
 	{
-		throw std::runtime_error(strerror(errno));
+		setFd(accept4(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC));
 	}
+	catch (const std::invalid_argument&)
+	{
+		throw std::runtime_error("accept4: " + std::string(strerror(errno)));
+	}
+	if (getsockname(server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), &server_addr_len) == -1)
+	{
+		throw std::runtime_error("getsockname: " + std::string(strerror(errno)));
+	}
+	retrieveHostPort(server_host, server_port, reinterpret_cast<struct sockaddr*>(&server_addr), server_addr_len);
+	retrieveHostPort(host, port, reinterpret_cast<struct sockaddr*>(&client_addr), addr_len);
 }
 
 ClientConnection::ClientConnection(ClientConnection const &other):
@@ -308,25 +320,11 @@ void	ClientConnection::makeResponse()
 		const Location&	loc = server->getLocation(request.uri);
 		if (loc.getIsRedirect())
 		{
-			response.status_code = loc.getRedirectCode();
-			if (response.status_code == MOVED_PERMANENTLY)
-				response.status_message = "Moved Permanently";
-			else if (response.status_code == MOVED_TEMPORARILY)
-				response.status_message = "Found";
-			else
-				response.status_message = "Redirect";
 			response.addHeader("Location", loc.getRedirectTarget());
-
-			std::stringstream body;
-			body	<< "<html><body>"
-				<< "<h1>" << response.status_message << "</h1>"
-				<< "<p>This resource has moved to <a href=\""
-				<< loc.getRedirectTarget() << "\">"
-				<< loc.getRedirectTarget() << "</a></p>"
-				<< "</body></html>";
-
-			response.setBody(body.str(), "text/html");
-			res_buffer = response.makeString();
+			sendErrorResponse(static_cast<StatusCode>(loc.getRedirectCode()),
+			"Redirecting",
+			server->getErrorPage(loc.getRedirectCode()),
+			std::vector<std::string>());
 			return ;
 		}
 		if (!loc.isMethod(request.method))
@@ -336,23 +334,23 @@ void	ClientConnection::makeResponse()
 					loc.getMethods());
 			return ;
 		}
-		if (is_cgi_script(request.uri))
-		{
-			std::cout << "getAlias : " << loc.getAlias() << std::endl;
-			std::cout << "getUri : " << request.uri << std::endl;
-			std::string uri_path = request.uri;
-			if (uri_path.rfind("/cgi-bin/", 0) == 0)
-				uri_path = uri_path.substr(9);
-			std::cout << "uriPath : " << uri_path << std::endl;
-			std::string script_path = loc.getAlias() + uri_path;
-			std::cout << "script_path" << script_path << std::endl;
-			int	ret = run_cgi_script(*this, script_path, *(getServer()->getNetworks()[0]));
-			if (ret != 0)
-				sendErrorResponse(INTERNAL_SERVER_ERROR, "CGI Excecution failed",
-					server->getErrorPage(INTERNAL_SERVER_ERROR),
-					std::vector<std::string>());
-			return ;
-		}
+		// if (is_cgi_script(request.uri))
+		// {
+		// 	std::cout << "getAlias : " << loc.getAlias() << std::endl;
+		// 	std::cout << "getUri : " << request.uri << std::endl;
+		// 	std::string uri_path = request.uri;
+		// 	if (uri_path.rfind("/cgi-bin/", 0) == 0)
+		// 		uri_path = uri_path.substr(9);
+		// 	std::cout << "uriPath : " << uri_path << std::endl;
+		// 	std::string script_path = loc.getAlias() + uri_path;
+		// 	std::cout << "script_path" << script_path << std::endl;
+		// 	int	ret = run_cgi_script(*this, script_path, *(getServer()->getNetworks()[0]));
+		// 	if (ret != 0)
+		// 		sendErrorResponse(INTERNAL_SERVER_ERROR, "CGI Excecution failed",
+		// 			server->getErrorPage(INTERNAL_SERVER_ERROR),
+		// 			std::vector<std::string>());
+		// 	return ;
+		// }
 		if (request.method == POST)
 		{
 			if (request.content_length_missing)
@@ -369,7 +367,8 @@ void	ClientConnection::makeResponse()
 			{
 				const std::string& filename = request.body.substr(filename_start_pos + FILENAME_FIELD.size(),
 					filename_end_pos - filename_start_pos - FILENAME_FIELD.size());
-				std::ofstream	file(("tmp/" + filename).c_str(), std::ios::binary);
+				const std::string&	filepath = "tmp/" + filename;
+				std::ofstream	file(filepath.c_str(), std::ios::binary);
 				if (!file)
 				{
 					sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
@@ -380,6 +379,10 @@ void	ClientConnection::makeResponse()
 				size_t	body_start_pos = request.body.find("\r\n\r\n");
 				size_t	body_end_pos = request.body.find("\r\n", body_start_pos + 4);
 				file << request.body.substr(body_start_pos + 4, body_end_pos - body_start_pos - 4);
+				if (loc.is_cgi_extension(filename))
+				{
+					run_cgi_script(filepath);
+				}
 			}
 			else
 			{
@@ -484,17 +487,24 @@ bool	ClientConnection::sendResponse()
 	return (res_buffer.empty());
 }
 
-void	ClientConnection::retrieveHost()
+void	ClientConnection::retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len)
 {
 	char host_buffer[NI_MAXHOST];
+	char port_buffer[NI_MAXSERV];
 
-	int gni_value = getnameinfo(reinterpret_cast<struct sockaddr*>(&client_addr),
-		addr_len, host_buffer, sizeof(host_buffer), NULL, 0, NI_NUMERICHOST);
+	int gni_value = getnameinfo(addr,
+		_addr_len,
+		host_buffer,
+		sizeof(host_buffer),
+		port_buffer,
+		sizeof(port_buffer),
+		NI_NUMERICHOST | NI_NUMERICSERV);
 	if (gni_value != 0)
 	{
 		throw std::runtime_error("getnameinfo: " + std::string(gai_strerror(gni_value)));
 	}
-	host = host_buffer;
+	_host = host_buffer;
+	_port = port_buffer;
 }
 
 std::string ClientConnection::getFileExtension(const std::string& filepath)
@@ -505,4 +515,176 @@ std::string ClientConnection::getFileExtension(const std::string& filepath)
 		return "";
 	}
 	return filepath.substr(pos + 1);
+}
+
+void	ClientConnection::run_cgi_script(const std::string& script_path)
+{ 
+	CGI cgi;
+
+	cgi.add_env("REQUEST_METHOD", request.method);
+	cgi.add_env("QUERY_STRING", getQueryString(request.uri));
+	cgi.add_env("CONTENT_LENGTH", getContentLength(request.headers));
+	cgi.add_env("CONTENT_TYPE", getContentType(request.headers));
+	cgi.add_env("SCRIPT_NAME", getScriptName(request.uri));
+	cgi.add_env("SERVER_NAME", server_host);
+	cgi.add_env("SERVER_PORT", server_port);
+	cgi.add_env("SERVER_PROTOCOL", request.version);
+	cgi.add_env("REMOTE_ADDR", host);
+	cgi.add_env("HTTP_USER_AGENT", getUserAgent(request.headers));
+	cgi.add_env("HTTP_COOKIE", getCookie(request.headers));
+	cgi.add_env("HTTP_REFERER", getReferer(request.headers));
+	cgi.add_env("GATEWAY_INTERFACE", "CGI/1.1");
+	cgi.add_env("PATH_INFO", getPathInfo(script_path));
+	
+	cgi.convert_env_map_to_envp(); // function to copy all the env_map variables into a environment so that i can run execve // 
+
+	pid_t	pid = fork(); // forking to let the child inherit all the env_variables // 
+	if (pid == -1)
+	{
+		throw std::runtime_error("fork: " + std::string(strerror(errno)));
+	}
+	if (pid == 0)
+	{
+		cgi.execute_cgi();
+	}
+	else
+	{
+		close(pipe_stdin[0]); // in the parent, not needed to read data from stdin //
+		close(pipe_stdout[1]); // in the parent, not needed to write data to stdout // 
+		if (req.method == "POST")
+		{
+			const std::string &body = req.body;
+			if (!body.empty())
+			{
+				if (write_all(pipe_stdin[1], body.c_str(), body.size()) == -1) // if post method, write data all to stdin // 
+				{
+					perror("Write to CGI stdin failed");
+					kill(pid, SIGKILL); // if failure, kill off the child and close all the pipes and free cgi_envp memory // 
+					close(pipe_stdin[1]);
+					close(pipe_stdout[0]);
+					free_envp(cgi_envp);
+					return (-1);
+				}
+			}
+		}
+		close(pipe_stdin[1]); // once data is written to stdin pipe, close off the pipe since no longer used // 
+		int epfd = epoll_create1(0); // create a new epoll fd to monitor events relating to pipe_stdout // 
+		if (epfd == -1)
+		{
+			perror("epoll_create1");
+			// Cleanup and return error
+			return (-1);
+		}
+		
+		// Add pipe_stdout[0] to epoll instance with edge-triggered read monitoring
+		struct epoll_event event = {};
+		event.events = EPOLLIN; // READ flag and changes state when there are events to be read // 
+		event.data.fd = pipe_stdout[0]; // fd to be monitored is pipe_stdout // 
+		if (epoll_ctl(epfd, EPOLL_CTL_ADD, pipe_stdout[0], &event) == -1) // add to epoll // 
+		{
+			perror("epoll_ctl ADD pipe_stdout");
+			close(epfd);
+			return (-1);
+		}
+		
+		// Set pipe_stdout[0] to non-blocking to properly use edge-triggered epoll
+		int flags = fcntl(pipe_stdout[0], F_GETFL, 0); // file access mode and status flags//
+		fcntl(pipe_stdout[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
+		
+		std::string cgi_output;
+		const int TIMEOUT_MS = 8000; // 3 seconds timeout
+		bool done = false;
+		bool timeout_occurred = false;
+		while (!done)
+		{
+			struct epoll_event events[1];
+			int nfds = epoll_wait(epfd, events, 1, TIMEOUT_MS);
+			
+			if (nfds == 0) // timeout
+			{
+				std::cerr << "Timeout waiting for CGI output. Killing child process." << std::endl;
+				kill(pid, SIGKILL);
+				timeout_occurred = true;
+				done = true;
+				break;
+			}
+			else if (nfds == -1) // error
+			{
+				if (errno == EINTR) // interrupted by signal, try again
+					continue; 
+				perror("epoll_wait");
+				std::cerr << "Error in epoll_wait. Killing child process." << std::endl;
+				kill(pid, SIGKILL);
+				timeout_occurred = true;
+				done = true;
+				break;
+			}
+			else
+			{
+				if (events[0].data.fd == pipe_stdout[0])
+				{
+					while (true)
+					{
+						char buf[BUFFER_SIZE];
+						ssize_t bytes_read = read(pipe_stdout[0], buf, sizeof(buf));
+						if (bytes_read == -1)
+						{
+							if (errno == EAGAIN)
+							{
+								// No more data for now
+								break;
+							}
+							else
+							{
+								perror("read from CGI stdout");
+								done = true;
+								break;
+							}
+						}
+						else if (bytes_read == 0)
+						{
+							// EOF - pipe closed by child
+							done = true;
+							break;
+						}
+						else
+						{
+							cgi_output.append(buf, static_cast<size_t>(bytes_read));
+						}
+					}
+				}
+			}
+		}
+		close(pipe_stdout[0]); // close pipe_stdout once data is read //
+		close(epfd); // close epoll fd as well //
+		
+		if (!timeout_occurred) // if timeout has not occured, we monitor the status flags // 
+		{
+			int status;
+			pid_t result = waitpid(pid, &status, WNOHANG);
+			if (result == 0)
+			{
+			}
+			else if (result == pid)
+			{
+				if (WIFEXITED(status))
+				{
+					int exit_code = WEXITSTATUS(status);
+					std::cout << "CGI script exited normally with code "
+						<< exit_code << std::endl;
+				}
+				else if (WIFSIGNALED(status))
+				{
+					int term_sig = WTERMSIG(status);
+					std::cout << "CGI script was terminated by signal "
+						<< term_sig << std::endl;
+				}
+				// Mark that you are done reading from CGI output because the child terminated.
+				done = true;
+			}		
+		}
+		free_envp(cgi_envp);
+		// Use cgi_output as the CGI script response content
+		std::cout << "Parent received:\n" << cgi_output << std::endl;
+	}
 }

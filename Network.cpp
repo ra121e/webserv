@@ -8,37 +8,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-Network::Network() : socket_fd(-1)
+Network::Network(const std::string& _host, const std::string& _port): host(_host), port(_port)
 {
-}
-
-Network::Network(const std::string& _host, const std::string& _port): host(_host), port(_port), socket_fd(-1)
-{
-}
-
-Network::Network(const Network& other): host(other.host), port(other.port), socket_fd(dup(other.socket_fd))
-{
-}
-
-Network&	Network::operator=(const Network& other)
-{
-	if (this != &other)
-	{
-		host = other.host;
-		port = other.port;
-		socket_fd = dup(other.socket_fd);
-	}
-	return *this;
-}
-
-Network::~Network()
-{
-	close(socket_fd);
-}
-
-int	Network::getFd() const
-{
-	return socket_fd;
 }
 
 const std::string&	Network::getHost() const
@@ -68,25 +39,20 @@ void	Network::setupListener()
 	}
 	for (struct addrinfo* ai = res; ai; ai = ai->ai_next)
 	{
-		socket_fd = socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC, ai->ai_protocol);
-		if (socket_fd < 0)
+		setFd(socket(ai->ai_family, ai->ai_socktype | SOCK_CLOEXEC | SOCK_NONBLOCK, ai->ai_protocol));
+		if (getFd() < 0)
 		{
 			continue;
 		}
-		setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-		if (fcntl(socket_fd, F_SETFL, O_NONBLOCK) < 0)
+		setsockopt(getFd(), SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+		if (bind(getFd(), ai->ai_addr, ai->ai_addrlen) < 0)
 		{
-			close(socket_fd);
+			closeFd();
 			continue;
 		}
-		if (bind(socket_fd, ai->ai_addr, ai->ai_addrlen) < 0)
+		if (listen(getFd(), SOMAXCONN) < 0)
 		{
-			close(socket_fd);
-			continue;
-		}
-		if (listen(socket_fd, SOMAXCONN) < 0)
-		{
-			close(socket_fd);
+			closeFd();
 			continue;
 		}
 		freeaddrinfo(res);

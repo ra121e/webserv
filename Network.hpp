@@ -8,14 +8,13 @@
 #include <sys/types.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <errno.h>
+#include "BaseFile.hpp"
 
-class Network
+class Network: public BaseFile
 {
 private:
 	std::string	host;
 	std::string	port;
-	int			socket_fd;
 	
 public:
 	Network();
@@ -23,7 +22,6 @@ public:
 	Network(const Network& other);
 	Network&	operator=(const Network& other);
 	~Network();
-	int		getFd() const;
 	const std::string&	getHost() const;
 	const std::string&	getPort() const;
 	void	setupListener();

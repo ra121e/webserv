@@ -12,41 +12,21 @@ BaseFile::BaseFile(int _fd) : fd(_fd)
 	}
 }
 
-BaseFile::BaseFile(const BaseFile& other) : fd(dup(other.fd))
-{
-	if (fd < 0)
-	{
-		throw std::invalid_argument(strerror(errno));
-	}
-}
-
-BaseFile& BaseFile::operator=(const BaseFile& other)
-{
-	if (this != &other)
-	{
-		if (fd >= 0)
-		{
-			close(fd);
-		}
-		fd = dup(other.fd);
-		if (fd < 0)
-		{
-			throw std::invalid_argument(strerror(errno));
-		}
-	}
-	return *this;
-}
-
 BaseFile::BaseFile() : fd(-1)
 {
 }
 
 BaseFile::~BaseFile()
 {
-	close(fd);
+	closeFd();
 }
 
 int BaseFile::getFd() const
+{
+	return fd;
+}
+
+int& BaseFile::getFd()
 {
 	return fd;
 }
@@ -57,5 +37,14 @@ void BaseFile::setFd(int _fd)
 	if (fd < 0)
 	{
 		throw std::invalid_argument("Setting invalid file descriptor in BaseFile");
+	}
+}
+
+void BaseFile::closeFd()
+{
+	if (fd >= 0)
+	{
+		close(fd);
+		fd = -1;
 	}
 }

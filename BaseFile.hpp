@@ -11,10 +11,12 @@ public:
 	BaseFile(int _fd);
 	BaseFile(const BaseFile& other);
 	BaseFile& operator=(const BaseFile& other);
-	virtual ~BaseFile() = 0;
+	virtual ~BaseFile();
 
 	int		getFd() const;
+	int&	getFd();
 	void	setFd(int _fd);
+	void	closeFd();
 };
 
 #endif

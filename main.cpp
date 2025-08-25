@@ -33,10 +33,6 @@ extern "C" void handle_sigint_c(int signum)
 
 int	main(int argc, char **argv)
 {
-	// Ensure tmp/ files are cleaned on exit (normal stop or exceptions)
-	TmpDirCleaner cleanupGuard("tmp");
-	Config	conf;
-
 	if (argc != 2)
 	{
 		std::cerr << "Usage: ./webserv [configuration file]\n";
@@ -44,9 +40,15 @@ int	main(int argc, char **argv)
 	}
 	try
 	{
+		// Ensure tmp/ files are cleaned on exit (normal stop or exceptions)
+		TmpDirCleaner cleanupGuard("tmp");
+		Config	conf;
+
 		conf.get_file_config(argv[1]);
 		conf.setupServers();
+
 		Epoll	epoll(epoll_create1(EPOLL_CLOEXEC));
+		
 		for (std::vector<Server*>::const_iterator s_it = conf.getServers().begin(); s_it != conf.getServers().end(); ++s_it)
 		{
 			for (std::vector<Network*>::const_iterator n_it = (*s_it)->getNetworks().begin(); n_it != (*s_it)->getNetworks().end(); ++n_it)

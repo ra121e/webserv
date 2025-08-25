@@ -43,6 +43,19 @@ void	Location::parse_route_index(std::istringstream& iss)
 	setIndex(idx);
 }
 
+void	Location::parse_route_cgi_extensions(std::istringstream& iss)
+{
+	std::string ext;
+	while ((iss >> ext) != 0)
+	{
+		if (ext[0] != '.')
+		{
+			throw std::runtime_error("Error: CGI extensions must start with a dot");
+		}
+		cgi_extensions.push_back(ext);
+	}
+}
+
 void	Location::parse_route_redirect(std::istringstream& iss)
 {
 	int			code = 0;
@@ -77,6 +90,10 @@ bool	Location::parse_route_attributes(const std::string& line)
 		else if (word == "index")
 		{
 			parse_route_index(iss);
+		}
+		else if (word == "cgi-extensions")
+		{
+			parse_route_cgi_extensions(iss);
 		}
 		else if (word == "redirect")
 		{
@@ -177,4 +194,25 @@ const std::string& Location::getRedirectTarget() const
 int	Location::getRedirectCode() const
 {
 	return (redirect_code);
+}
+
+bool Location::is_cgi_extension(const std::string &filename) const
+{
+	for (std::vector<std::string>::const_iterator it = cgi_extensions.begin(); it != cgi_extensions.end(); ++it)
+	{
+		if (filename_ends_with(filename, *it))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool	Location::filename_ends_with(const std::string &filename, const std::string &extension)
+{
+	if (filename.length() < extension.length())
+	{
+		return false;
+	}
+	return filename.compare(filename.length() - extension.length(), extension.length(), extension) == 0;
 }

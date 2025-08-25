@@ -15,6 +15,7 @@
 
 # include "HttpRequest.hpp"
 # include "HttpResponse.hpp"
+#include "Location.hpp"
 # include "cgi_handler.hpp"
 # include "Server.hpp"
 #include <cstddef>
@@ -23,6 +24,7 @@
 #include <netinet/in.h>
 #include <string>
 #include <sys/socket.h>
+#include <unistd.h>
 #include "BaseFile.hpp"
 
 class ClientConnection : public BaseFile
@@ -49,13 +51,19 @@ class ClientConnection : public BaseFile
 		bool	parseRequest();
 		void	makeResponse();
 		bool	sendResponse();
-		void	retrieveHost();
+		void	retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len);
+		void	run_cgi_script(const std::string& script_path);
 
 	private:
 		socklen_t			addr_len;
 		struct sockaddr_in	client_addr;
+		socklen_t			server_addr_len;
+		struct sockaddr_storage	server_addr;
 		Server				*server;
+		std::string			server_host;
+		std::string			server_port;
 		std::string			host;
+		std::string			port;
 		std::string			buffer;
 		std::string			res_buffer;
 		HttpRequest			request;

@@ -2,7 +2,6 @@
 # define LOCATION_HPP
 #include <sstream>
 # include <vector>
-# include <iostream>
 # include <string>
 
 class Location
@@ -12,20 +11,23 @@ class Location
 	std::string					alias;
 	bool						autoindex;
 	std::string					index;
+	std::vector<std::string>	cgi_extensions;
 	bool						is_redirect;
 	std::string					redirect_target;
 	int							redirect_code;
 
+	void	parse_route_methods(std::istringstream& iss);
 	void	parse_route_alias(std::istringstream& iss);
 	void	parse_route_autoindex(std::istringstream& iss);
 	void	parse_route_index(std::istringstream& iss);
+	void	parse_route_cgi_extensions(std::istringstream& iss);
 	void	parse_route_redirect(std::istringstream& iss);
+	static bool	filename_ends_with(const std::string &filename, const std::string &extension);
 
 
 	public:
 	Location();
 	bool	parse_route_attributes(const std::string& line);
-	void	parse_route_methods(std::istringstream& iss);
 	void	addMethod(const std::string& method);
 	void	setAlias(const std::string& _alias);
 	void	enableAutoIndex();
@@ -39,6 +41,7 @@ class Location
 	bool	getIsRedirect() const;
 	const std::string&	getRedirectTarget() const;
 	int	getRedirectCode() const;
+	bool	is_cgi_extension(const std::string &filename) const;
 };
 
 #endif
