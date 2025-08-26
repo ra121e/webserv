@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/25 20:40:21 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/26 21:59:23 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,12 +36,12 @@ static const char* const	POST = "POST";
 static const char* const	DELETE = "DELETE";
 
 ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
+	BaseExpiration(_expiry),
 	addr_len(sizeof(client_addr)),
 	client_addr(),
 	server_addr_len(sizeof(server_addr)),
 	server_addr(),
 	server(srv),
-	expiry(_expiry),
 	server_error(false),
 	timed_out(false)
 {
@@ -64,7 +64,7 @@ ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
 ClientConnection::ClientConnection(ClientConnection const &other):
 	BaseFile(other),
 	addr_len(other.addr_len),
-	client_addr(other.client_addr),
+	client_addr(other.client_addr), server_addr_len(), server_addr(),
 	server(new Server(*other.server)),
 	buffer(other.buffer),
 	request(other.request),
@@ -521,7 +521,7 @@ std::string ClientConnection::getFileExtension(const std::string& filepath)
 
 void	ClientConnection::run_cgi_script(const std::string& script_path, Epoll& epoll)
 { 
-	CGI* cgi = new CGI;
+	CGI* cgi = new CGI(this); // pass the current ClientConnection instance to CGI constructor //
 
 	cgi->add_env("REQUEST_METHOD", request.method);
 	cgi->add_env("QUERY_STRING", getQueryString(request.uri));
@@ -549,107 +549,110 @@ void	ClientConnection::run_cgi_script(const std::string& script_path, Epoll& epo
 			break;
 		default:
 			cgi->close_pipes();
-			epoll.addCgi(cgi->get_server_read_fd(), cgi);
-			epoll.addCgi(cgi->get_server_write_fd(), cgi);
+			epoll.addResource<CGI>(cgi->get_server_read_fd(), cgi);
+			if (request.method == "POST")
+			{
+				epoll.modifyEpoll(cgi->get_server_write_fd(), EPOLLOUT, EPOLL_CTL_ADD);
+			}
 	}
 }
 		
 		// Set server_read_cgi_write_pipe[0] to non-blocking to properly use edge-triggered epoll
-		int flags = fcntl(server_read_cgi_write_pipe[0], F_GETFL, 0); // file access mode and status flags//
-		fcntl(server_read_cgi_write_pipe[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
+		// int flags = fcntl(server_read_cgi_write_pipe[0], F_GETFL, 0); // file access mode and status flags//
+		// fcntl(server_read_cgi_write_pipe[0], F_SETFL, flags | O_NONBLOCK); // set it to nonblocking //
 		
-		std::string cgi_output;
-		const int TIMEOUT_MS = 8000; // 3 seconds timeout
-		bool done = false;
-		bool timeout_occurred = false;
-		while (!done)
-		{
-			struct epoll_event events[1];
-			int nfds = epoll_wait(epfd, events, 1, TIMEOUT_MS);
+		// std::string cgi_output;
+		// const int TIMEOUT_MS = 8000; // 3 seconds timeout
+		// bool done = false;
+		// bool timeout_occurred = false;
+		// while (!done)
+		// {
+		// 	struct epoll_event events[1];
+		// 	int nfds = epoll_wait(epfd, events, 1, TIMEOUT_MS);
 			
-			if (nfds == 0) // timeout
-			{
-				std::cerr << "Timeout waiting for CGI output. Killing child process." << std::endl;
-				kill(pid, SIGKILL);
-				timeout_occurred = true;
-				done = true;
-				break;
-			}
-			else if (nfds == -1) // error
-			{
-				if (errno == EINTR) // interrupted by signal, try again
-					continue; 
-				perror("epoll_wait");
-				std::cerr << "Error in epoll_wait. Killing child process." << std::endl;
-				kill(pid, SIGKILL);
-				timeout_occurred = true;
-				done = true;
-				break;
-			}
-			else
-			{
-				if (events[0].data.fd == server_read_cgi_write_pipe[0])
-				{
-					while (true)
-					{
-						char buf[BUFFER_SIZE];
-						ssize_t bytes_read = read(server_read_cgi_write_pipe[0], buf, sizeof(buf));
-						if (bytes_read == -1)
-						{
-							if (errno == EAGAIN)
-							{
-								// No more data for now
-								break;
-							}
-							else
-							{
-								perror("read from CGI stdout");
-								done = true;
-								break;
-							}
-						}
-						else if (bytes_read == 0)
-						{
-							// EOF - pipe closed by child
-							done = true;
-							break;
-						}
-						else
-						{
-							cgi_output.append(buf, static_cast<size_t>(bytes_read));
-						}
-					}
-				}
-			}
-		}
-		close(server_read_cgi_write_pipe[0]); // close server_read_cgi_write_pipe once data is read //
-		close(epfd); // close epoll fd as well //
+		// 	if (nfds == 0) // timeout
+		// 	{
+		// 		std::cerr << "Timeout waiting for CGI output. Killing child process." << std::endl;
+		// 		kill(pid, SIGKILL);
+		// 		timeout_occurred = true;
+		// 		done = true;
+		// 		break;
+		// 	}
+		// 	else if (nfds == -1) // error
+		// 	{
+		// 		if (errno == EINTR) // interrupted by signal, try again
+		// 			continue; 
+		// 		perror("epoll_wait");
+		// 		std::cerr << "Error in epoll_wait. Killing child process." << std::endl;
+		// 		kill(pid, SIGKILL);
+		// 		timeout_occurred = true;
+		// 		done = true;
+		// 		break;
+		// 	}
+		// 	else
+		// 	{
+		// 		if (events[0].data.fd == server_read_cgi_write_pipe[0])
+		// 		{
+		// 			while (true)
+		// 			{
+		// 				char buf[BUFFER_SIZE];
+		// 				ssize_t bytes_read = read(server_read_cgi_write_pipe[0], buf, sizeof(buf));
+		// 				if (bytes_read == -1)
+		// 				{
+		// 					if (errno == EAGAIN)
+		// 					{
+		// 						// No more data for now
+		// 						break;
+		// 					}
+		// 					else
+		// 					{
+		// 						perror("read from CGI stdout");
+		// 						done = true;
+		// 						break;
+		// 					}
+		// 				}
+		// 				else if (bytes_read == 0)
+		// 				{
+		// 					// EOF - pipe closed by child
+		// 					done = true;
+		// 					break;
+		// 				}
+		// 				else
+		// 				{
+		// 					cgi_output.append(buf, static_cast<size_t>(bytes_read));
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+		// close(server_read_cgi_write_pipe[0]); // close server_read_cgi_write_pipe once data is read //
+		// close(epfd); // close epoll fd as well //
 		
-		if (!timeout_occurred) // if timeout has not occured, we monitor the status flags // 
-		{
-			int status;
-			pid_t result = waitpid(pid, &status, WNOHANG);
-			if (result == 0)
-			{
-			}
-			else if (result == pid)
-			{
-				if (WIFEXITED(status))
-				{
-					int exit_code = WEXITSTATUS(status);
-					std::cout << "CGI script exited normally with code "
-						<< exit_code << std::endl;
-				}
-				else if (WIFSIGNALED(status))
-				{
-					int term_sig = WTERMSIG(status);
-					std::cout << "CGI script was terminated by signal "
-						<< term_sig << std::endl;
-				}
-				// Mark that you are done reading from CGI output because the child terminated.
-				done = true;
-			}		
-		}
-		free_envp(cgi_envp);
-		// Use cgi_output as the CGI script response content
-		std::cout << "Parent received:\n" << cgi_output << std::endl;
+		// if (!timeout_occurred) // if timeout has not occured, we monitor the status flags // 
+		// {
+		// 	int status;
+		// 	pid_t result = waitpid(pid, &status, WNOHANG);
+		// 	if (result == 0)
+		// 	{
+		// 	}
+		// 	else if (result == pid)
+		// 	{
+		// 		if (WIFEXITED(status))
+		// 		{
+		// 			int exit_code = WEXITSTATUS(status);
+		// 			std::cout << "CGI script exited normally with code "
+		// 				<< exit_code << std::endl;
+		// 		}
+		// 		else if (WIFSIGNALED(status))
+		// 		{
+		// 			int term_sig = WTERMSIG(status);
+		// 			std::cout << "CGI script was terminated by signal "
+		// 				<< term_sig << std::endl;
+		// 		}
+		// 		// Mark that you are done reading from CGI output because the child terminated.
+		// 		done = true;
+		// 	}		
+		// }
+		// free_envp(cgi_envp);
+		// // Use cgi_output as the CGI script response content
+		// std::cout << "Parent received:\n" << cgi_output << std::endl;

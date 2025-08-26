@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/25 14:52:37 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/26 21:57:51 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,8 +27,9 @@ class ClientConnection;
 #include <unistd.h>
 #include "BaseFile.hpp"
 #include "Epoll.hpp"
+#include "BaseExpiration.hpp"
 
-class ClientConnection : public BaseFile
+class ClientConnection : public BaseFile, public BaseExpiration
 {
 	public:
 		ClientConnection(int server_fd, Server *srv, time_t _expiry);
@@ -45,8 +46,6 @@ class ClientConnection : public BaseFile
 		Server	*getServer() const;
 		void	setServerError(bool error);
 		void	setTimedOut(bool timeout);
-		void	setExpiry(time_t _expiry);
-		time_t	getExpiry() const;
 
 		void	appendToBuffer(char const *data, size_t size);
 		bool	parseRequest();
@@ -69,7 +68,6 @@ class ClientConnection : public BaseFile
 		std::string			res_buffer;
 		HttpRequest			request;
 		HttpResponse		response;
-		time_t				expiry;
 		bool				server_error;
 		bool				timed_out;
 		enum StatusCode

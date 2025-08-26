@@ -28,53 +28,16 @@ Epoll::~Epoll()
 	}
 }
 
-void	Epoll::addEventListener(Server* server, int listen_fd)
-{
-	// set server fd and event into event struct (its like "entry sheet" or "application form")
-	struct epoll_event	event = {};
-	event.events = EPOLLIN;
-	event.data.fd = listen_fd;
-
-	// registration event into epoll
-	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, listen_fd, &event) == -1)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
-	servers[listen_fd] = server;
-}
-
 // set client fd and event to "application form"
 void	Epoll::addClient(int server_fd)
 {
 	time_t				current_time = time(NULL);
 	ClientConnection	*client = new ClientConnection(server_fd, servers[server_fd], current_time + TIMEOUT);
 
-	struct epoll_event	event = {};
-	event.events = EPOLLIN;
-	event.data.fd = client->getFd();
-
-	// registration the client socket into epoll
-	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, client->getFd(), &event) == -1)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
+	modifyEpoll(client->getFd(), EPOLLIN, EPOLL_CTL_ADD);
 	clients[client->getFd()] = client;
 	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + TIMEOUT));
 	timer.setTimer(TIMEOUT);
-}
-
-void Epoll::modifyEventListener(ClientConnection *client) const
-{
-	// set server fd and event into event struct (its like "entry sheet" or "application form")
-	struct epoll_event event = {};
-	event.events = EPOLLOUT;
-	event.data.fd = client->getFd();
-
-	// registration event into epoll
-	if (epoll_ctl(getFd(), EPOLL_CTL_MOD, client->getFd(), &event) == -1)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
 }
 
 void	Epoll::handleEvents()
@@ -114,7 +77,7 @@ void	Epoll::handleEvents()
 					}
 					client->setTimedOut(true);
 					client->makeResponse(*this);
-					modifyEventListener(client);
+					modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
 				}
 			}
 			if (!expiry_queue.empty())
@@ -125,87 +88,35 @@ void	Epoll::handleEvents()
 		else
 		{
 			std::map<int, ClientConnection*>::iterator ite = clients.find(current_fd);
-			if (ite == clients.end())
+			if (ite != clients.end())
 			{
-				throw std::runtime_error("Unexpected error encountered");
+				handleClientsAndCgis<ClientConnection>(ite->second, events[i].events, current_fd);
+				continue;
 			}
-			ClientConnection*	client = ite->second;
-
-			if (events[i].events & (EPOLLERR | EPOLLHUP))
+			std::map<int, CGI*>::iterator itc = cgis.find(current_fd);
+			if (itc != cgis.end())
 			{
-				// Drain the socket
-				if (events[i].events & EPOLLIN)
-				{
-					char	buf[BUFSIZ];
-					for (ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
-						bytes_read > 0; bytes_read = read(current_fd, buf, sizeof(buf)));
-				}
-				delete client;
-				clients.erase(current_fd);
+				handleClientsAndCgis<CGI>(itc->second, events[i].events, current_fd);
+				continue;
 			}
-			else if (events[i].events & EPOLLIN)
-			{
-				// receive data from client fd
-				char	buf[BUFSIZ];
-				ssize_t bytes_read = read(current_fd, buf, sizeof(buf));
-				if (bytes_read == 0)
-				{
-					delete client;
-					clients.erase(current_fd);
-					continue; // Client disconnected
-				}
-				if (bytes_read == -1)
-				{
-					client->setServerError(true);
-				}
-				else
-				{
-					time_t current_time = time(NULL);
-					expiry_queue.push(ConnectionExpiration(current_fd, current_time + TIMEOUT));
-					client->setExpiry(current_time + TIMEOUT);
-					timer.setTimer(expiry_queue.top().getExpiration() - current_time);
-					client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
-					if (!client->parseRequest())
-					{
-						continue; // Not enough data to parse the request
-					}
-				}
-				client->makeResponse();
-				modifyEventListener(client);
-			}
-			else if (events[i].events & EPOLLOUT)
-			{
-				if (client->sendResponse())
-				{
-					delete client;
-					clients.erase(current_fd);
-				}
-			}
+			throw std::runtime_error("Unknown file descriptor in epoll events");
 		}
 	}
 }
 
 void	Epoll::addTimer()
 {
-	struct epoll_event event = {};
-	event.events = EPOLLIN;
-	event.data.fd = timer.getFd();
-
-	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, timer.getFd(), &event) == -1)
-	{
-		throw std::runtime_error(strerror(errno));
-	}
+	modifyEpoll(timer.getFd(), EPOLLIN, EPOLL_CTL_ADD);
 }
 
-void	Epoll::addCgi(int cgi_fd, CGI* cgi)
+void	Epoll::modifyEpoll(int fd, uint32_t _events, int mode) const
 {
 	struct epoll_event event = {};
-	event.events = EPOLLIN;
-	event.data.fd = cgi_fd;
+	event.events = _events;
+	event.data.fd = fd;
 
-	if (epoll_ctl(getFd(), EPOLL_CTL_ADD, cgi_fd, &event) == -1)
+	if (epoll_ctl(getFd(), mode, fd, &event) == -1)
 	{
 		throw std::runtime_error(strerror(errno));
 	}
-	cgis[cgi_fd] = cgi;
 }

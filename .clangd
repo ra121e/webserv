@@ -11,8 +11,7 @@ CompileFlags:
     - "-std=c++98"
     # include directories if not already in compile_commands.json:
     - "-I${workspaceRoot}"
-  Remove:
-    - "-Wpadded"
+    - "-Wno-padded"
 
 # 2. Diagnostics behavior
 Diagnostics:

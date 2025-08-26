@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 18:43:15 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/26 17:29:33 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,7 @@ int	main(int argc, char **argv)
 		{
 			for (std::vector<Network*>::const_iterator n_it = (*s_it)->getNetworks().begin(); n_it != (*s_it)->getNetworks().end(); ++n_it)
 			{
-				epoll.addEventListener(*s_it, (*n_it)->getFd());
+				epoll.addResource<Server>((*n_it)->getFd(), *s_it);
 			}
 		}
 		std::signal(SIGINT, handle_sigint_c);

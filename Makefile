@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/08/17 21:53:12 by cgoh             ###   ########.fr        #
+#    Updated: 2025/08/26 18:08:05 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,7 @@ NAME_S	=	webserv
 SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp\
             cgi_handler.cpp cgi_utils.cpp Epoll.cpp ClientConnection.cpp\
             HttpRequest.cpp HttpResponse.cpp TmpDirCleaner.cpp BaseFile.cpp\
-            Timer.cpp ConnectionExpiration.cpp\
+            Timer.cpp ConnectionExpiration.cpp CGI.cpp Pipe.cpp
 
 SRC_DIR	=	.
 SRC_S	=	$(patsubst %.cpp,$(SRC_DIR)/%.cpp,$(SRC_F_S))
@@ -27,8 +27,6 @@ INC_DIR	=	.
 S_DEP	=	$(SRC_S:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
-# CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
-# CXXFLAGS	=	-ggdb3 -Wall -Werror -Wextra -std=c++98 -MMD -MP -Weverything -Wno-padded -fstack-protector-strong -fno-delete-null-pointer-checks -fno-strict-overflow -fno-strict-aliasing
 CXXFLAGS	=	-std=c++98 -Wall -Wextra -Werror -Wpedantic -MMD -MP -ggdb3 \
     -Wcast-align=strict \
     -Wcast-qual \
