@@ -6,17 +6,15 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/26 21:57:51 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/28 20:33:08 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CLIENTCONNECTION_HPP
 # define CLIENTCONNECTION_HPP
-
-class ClientConnection;
+// Minimal includes to reduce coupling; full definitions pulled in .cpp
 # include "HttpRequest.hpp"
 # include "HttpResponse.hpp"
-# include "cgi_handler.hpp"
 # include "Server.hpp"
 #include <cstddef>
 #include <ctime>
@@ -26,8 +24,11 @@ class ClientConnection;
 #include <sys/socket.h>
 #include <unistd.h>
 #include "BaseFile.hpp"
-#include "Epoll.hpp"
 #include "BaseExpiration.hpp"
+#include "cgi_handler.hpp"
+
+class Epoll; // forward declaration
+class CGI;   // forward declaration
 
 class ClientConnection : public BaseFile, public BaseExpiration
 {
@@ -51,7 +52,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		bool	parseRequest();
 		void	makeResponse(Epoll& epoll);
 		bool	sendResponse();
-		void	retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len);
+		static void	retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len);
 		void	run_cgi_script(const std::string& script_path, Epoll& epoll);
 
 	private:

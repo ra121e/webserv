@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/26 21:59:23 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/28 20:31:54 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include "CGI.hpp"
+#include "Epoll.hpp"
 
 static const char* const	GET = "GET";
 static const char* const	POST = "POST";
@@ -63,12 +64,14 @@ ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
 
 ClientConnection::ClientConnection(ClientConnection const &other):
 	BaseFile(other),
+	BaseExpiration(other),
 	addr_len(other.addr_len),
-	client_addr(other.client_addr), server_addr_len(), server_addr(),
+	client_addr(other.client_addr),
+	server_addr_len(other.server_addr_len),
+	server_addr(other.server_addr),
 	server(new Server(*other.server)),
 	buffer(other.buffer),
 	request(other.request),
-	expiry(other.expiry),
 	server_error(other.server_error),
 	timed_out(other.timed_out)
 {}
@@ -80,9 +83,9 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 		addr_len = other.addr_len;
 		client_addr = other.client_addr;
 		BaseFile::operator=(other);
+		BaseExpiration::operator=(other);
 		this->buffer = other.buffer;
 		this->request = other.request;
-		this->expiry = other.expiry;
 		delete this->server;
 		this->server = new Server(*other.server);
 		this->server_error = other.server_error;
@@ -133,16 +136,6 @@ void	ClientConnection::setServerError(bool error)
 void	ClientConnection::setTimedOut(bool timeout)
 {
 	timed_out = timeout;
-}
-
-void	ClientConnection::setExpiry(time_t _expiry)
-{
-	expiry = _expiry;
-}
-
-time_t	ClientConnection::getExpiry() const
-{
-	return expiry;
 }
 
 void	ClientConnection::appendToBuffer(char const *data, size_t size)

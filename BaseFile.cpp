@@ -16,6 +16,20 @@ BaseFile::BaseFile() : fd(-1)
 {
 }
 
+BaseFile::BaseFile(const BaseFile& other) : fd(dup(other.fd))
+{
+}
+
+BaseFile& BaseFile::operator=(const BaseFile& other)
+{
+	if (this != &other)
+	{
+		closeFd();
+		fd = dup(other.fd);
+	}
+	return *this;
+}
+
 BaseFile::~BaseFile()
 {
 	closeFd();

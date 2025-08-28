@@ -19,9 +19,6 @@ private:
 public:
 	Network();
 	Network(const std::string& _host, const std::string& _port);
-	Network(const Network& other);
-	Network&	operator=(const Network& other);
-	~Network();
 	const std::string&	getHost() const;
 	const std::string&	getPort() const;
 	void	setupListener();

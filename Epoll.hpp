@@ -1,6 +1,6 @@
 #ifndef EPOLL_HPP
 #define EPOLL_HPP
-class Epoll;
+#include <cstdio>
 #include <functional>
 #include <map>
 #include <queue>
@@ -9,12 +9,13 @@ class Epoll;
 #include <cstring>
 #include <sys/epoll.h>
 #include <netinet/in.h>
-#include "ClientConnection.hpp"
-#include "Server.hpp"
 #include "BaseFile.hpp"
 #include "Timer.hpp"
 #include "ConnectionExpiration.hpp"
-#include "CGI.hpp"
+
+class Server;
+class ClientConnection;
+class CGI;
 
 class Epoll: public BaseFile
 {
@@ -31,43 +32,37 @@ private:
 	Epoll(const Epoll& other);
 	Epoll&	operator=(const Epoll& other);
 	template<typename T>
-	void	addToMap(int fd, T* resource);
+	void	addToMap(int _fd, T* resource);
 	template<typename T>
 	void	removeResource(int resourceFd, T* resource);
 	template<typename T>
 	void	handleReadError(int resourceFd, T* resource);
+	template<typename T>
+	void	handleServerWrite(T* resource, int event_fd);
 public:
 	Epoll(int _fd);
 	~Epoll();
 	void	addClient(int server_fd);
 	void	handleEvents();
 	void	addTimer();
-	void	modifyEpoll(int fd, uint32_t _events, int mode) const;
+	void	modifyEpoll(int _fd, uint32_t _events, int mode) const;
 	template<typename T>
-	void	addResource(int fd, T* resource);
+	void	addResource(int _fd, T* resource);
 	template<typename T>
 	void	handleClientsAndCgis(T* resource, uint32_t _events, int event_fd);
+	template<typename T>
+	bool	handleReadFromClient(T* resource, int event_fd, const char* buf, ssize_t bytes_read);
+	template<typename T>
+	void	prepWriteToClient(T* resource, const char* buf);
 };
 
 #endif
 
 template<typename T>
-void	Epoll::addResource(int fd, T* resource)
+void	Epoll::addResource(int _fd, T* resource)
 {
-	modifyEpoll(fd, EPOLLIN, EPOLL_CTL_ADD);
-	addToMap<T>(fd, resource);
-}
-
-template<>
-void	Epoll::addToMap(int fd, Server* resource)
-{
-	servers[fd] = resource;
-}
-
-template<>
-void	Epoll::addToMap(int fd, CGI* resource)
-{
-	cgis[fd] = resource;
+	modifyEpoll(_fd, EPOLLIN, EPOLL_CTL_ADD);
+	addToMap<T>(_fd, resource);
 }
 
 template<typename T>
@@ -100,52 +95,16 @@ void	Epoll::handleClientsAndCgis(T* resource, uint32_t _events, int event_fd)
 		}
 		else
 		{
-			time_t current_time = time(NULL);
-			expiry_queue.push(ConnectionExpiration(event_fd, current_time + TIMEOUT));
-			client->setExpiry(current_time + TIMEOUT);
-			timer.setTimer(expiry_queue.top().getExpiration() - current_time);
-			client->appendToBuffer(buf, static_cast<size_t>(bytes_read));
-			if (!client->parseRequest())
+			if (!handleReadFromClient<T>(resource, event_fd, buf, bytes_read))
 			{
-				continue; // Not enough data to parse the request
+				// Handle case where not enough data was received
+				return;
 			}
 		}
-		client->makeResponse(*this);
-		modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+		prepWriteToClient<T>(resource, buf);
 	}
 	else if (_events & EPOLLOUT)
 	{
-		if (client->sendResponse())
-		{
-			delete client;
-			clients.erase(current_fd);
-		}
+		handleServerWrite<T>(resource, event_fd);
 	}
-}
-
-template<>
-void	Epoll::removeResource(int resourceFd, ClientConnection* resource)
-{
-	clients.erase(resourceFd);
-	delete resource;
-}
-
-template<>
-void	Epoll::removeResource(int resourceFd, CGI* resource)
-{
-	cgis.erase(resourceFd);
-	delete resource;
-}
-
-template<>
-void	Epoll::handleReadError(int resourceFd, ClientConnection* resource)
-{
-	resource->setServerError(true);
-}
-
-template<>
-void	Epoll::handleReadError(int resourceFd, CGI* resource)
-{
-	removeResource<CGI>(resourceFd, resource);
-	resource->client->setServerError(true);
 }

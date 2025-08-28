@@ -6,6 +6,8 @@
 #include <cstring>
 #include <stdexcept>
 #include <cerrno>
+#include <bsd/string.h>
+#include "ClientConnection.hpp"
 
 CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client)
 {
@@ -98,4 +100,19 @@ int	CGI::get_server_write_fd() const
 int	CGI::get_server_read_fd() const
 {
 	return server_read_cgi_write_pipe[STDIN_FILENO].getFd();
+}
+
+ClientConnection*	CGI::get_client() const
+{
+	return client;
+}
+
+void	CGI::writeToInputBuffer(const std::string& data)
+{
+	input_buffer.append(data);
+}
+
+const std::string&	CGI::getInputBuffer() const
+{
+	return input_buffer;
 }

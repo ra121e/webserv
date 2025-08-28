@@ -6,128 +6,128 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/17 17:09:41 by apoh              #+#    #+#             */
-/*   Updated: 2025/08/25 13:32:10 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/28 20:43:26 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "cgi_handler.hpp"
-#include "ClientConnection.hpp"
+#include <iostream>
 
-bool is_cgi_script(const std::string &path) // checks if path starts with /cgi/bin or is it a .cgi file. Have not used this yet but it would be a good function to keep // 
-{
-	if (path.length() >= 9)
-	{
-		if (path.substr(0, 9) == "/cgi-bin/")
-			return (true);
-	}
-	std::string extension = ".cgi"; 
-	if (path.length() >= extension.length() && path.substr(path.length() - extension.length()) == extension)
-		return (true);
-	return (false);
-}
+// bool is_cgi_script(const std::string &path) // checks if path starts with /cgi/bin or is it a .cgi file. Have not used this yet but it would be a good function to keep // 
+// {
+// 	if (path.length() >= 9)
+// 	{
+// 		if (path.substr(0, 9) == "/cgi-bin/")
+// 			return (true);
+// 	}
+// 	std::string extension = ".cgi"; 
+// 	if (path.length() >= extension.length() && path.substr(path.length() - extension.length()) == extension)
+// 		return (true);
+// 	return (false);
+// }
 
-int create_pipe(int fds[2]) // pipe creation. One for parent one for child, fd[0] is read end fd[1] is write in //
-{
-	if (pipe(fds) == -1)
-	{
-		perror("pipe failed");
-		return (-1);
-	}
-	return (0);
-}
+// int create_pipe(int fds[2]) // pipe creation. One for parent one for child, fd[0] is read end fd[1] is write in //
+// {
+// 	if (pipe(fds) == -1)
+// 	{
+// 		perror("pipe failed");
+// 		return (-1);
+// 	}
+// 	return (0);
+// }
 
-size_t ft_strlen(const char *s) // if using libft, this function can throw away //
-{
-	if (s == NULL)
-		return (0);
-	size_t len = 0;
-	while (s[len] != '\0')
-		len++;
-	return (len);
-}
+// size_t ft_strlen(const char *s) // if using libft, this function can throw away //
+// {
+// 	if (s == NULL)
+// 		return (0);
+// 	size_t len = 0;
+// 	while (s[len] != '\0')
+// 		len++;
+// 	return (len);
+// }
 
-char *ft_strdup(const char *s) // same, if using libft, this function can throw away //
-{
-	if (s == NULL)
-		return (NULL);
-	size_t len = ft_strlen(s);
-	char *dup = new char[len + 1];
-	size_t i = 0;
+// char *ft_strdup(const char *s) // same, if using libft, this function can throw away //
+// {
+// 	if (s == NULL)
+// 		return (NULL);
+// 	size_t len = ft_strlen(s);
+// 	char *dup = new char[len + 1];
+// 	size_t i = 0;
 	
-	while (i < len)
-	{
-		dup[i] = s[i];
-		i++;
-	}
-	dup[i] = '\0';
-	return (dup);
-}
+// 	while (i < len)
+// 	{
+// 		dup[i] = s[i];
+// 		i++;
+// 	}
+// 	dup[i] = '\0';
+// 	return (dup);
+// }
 
-size_t ft_strlcpy(char *dest, const char *src, size_t size) // same, if using libft, this function can throw away // 
-{
-	size_t i = 0;
+// size_t ft_strlcpy(char *dest, const char *src, size_t size) // same, if using libft, this function can throw away // 
+// {
+// 	size_t i = 0;
 	
-	if (size == 0)
-		return (ft_strlen(src));
-	while (src[i] != '\0' && i < (size - 1))
-	{
-		dest[i] = src[i];
-		i++;
-	}
-	dest[i] = '\0';
-	return (ft_strlen(src));
-}
+// 	if (size == 0)
+// 		return (ft_strlen(src));
+// 	while (src[i] != '\0' && i < (size - 1))
+// 	{
+// 		dest[i] = src[i];
+// 		i++;
+// 	}
+// 	dest[i] = '\0';
+// 	return (ft_strlen(src));
+// }
 
-char **map_to_envp(const std::map<std::string, std::string> &env_map) // this is to create a new envp variable which has your HTTP methods, and all the other variables that are associated //
-{
-	char **envp = new char*[env_map.size() + 1]; // run_cgi function for env_map //
-	size_t index = 0;
+// char **map_to_envp(const std::map<std::string, std::string> &env_map) // this is to create a new envp variable which has your HTTP methods, and all the other variables that are associated //
+// {
+// 	char **envp = new char*[env_map.size() + 1]; // run_cgi function for env_map //
+// 	size_t index = 0;
 	
-	for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
-		it != env_map.end(); ++it) // const iterator so that values doesnt change //
-	{
-		std::string pair = it->first + "=" + it->second;
-		char *cstr = new char[pair.size() + 1];
-		if (cstr == NULL)
-		{
-			for (size_t j = 0; j < index; ++j)
-				free(envp[j]);
-			delete[] envp;
-			return (NULL);
-		}
-		ft_strlcpy(cstr, pair.c_str(), pair.size() + 1); // convert pair to C string so you can copy //
-		envp[index++] = cstr;
-	}
-	envp[index] = NULL;
-	return (envp);
-}
+// 	for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
+// 		it != env_map.end(); ++it) // const iterator so that values doesnt change //
+// 	{
+// 		std::string pair = it->first + "=" + it->second;
+// 		char *cstr = new char[pair.size() + 1];
+// 		if (cstr == NULL)
+// 		{
+// 			for (size_t j = 0; j < index; ++j)
+// 				free(envp[j]);
+// 			delete[] envp;
+// 			return (NULL);
+// 		}
+// 		ft_strlcpy(cstr, pair.c_str(), pair.size() + 1); // convert pair to C string so you can copy //
+// 		envp[index++] = cstr;
+// 	}
+// 	envp[index] = NULL;
+// 	return (envp);
+// }
 
-void free_envp(char **envp) // freeing the new envp variable that you have created //
-{
-	if (envp == NULL)
-		return;
-	for (size_t i = 0; envp[i] != NULL; ++i)
-		free(envp[i]);
-	delete[] envp;
-}
+// void free_envp(char **envp) // freeing the new envp variable that you have created //
+// {
+// 	if (envp == NULL)
+// 		return;
+// 	for (size_t i = 0; envp[i] != NULL; ++i)
+// 		free(envp[i]);
+// 	delete[] envp;
+// }
 
-ssize_t write_all(int fd, const char *buf, size_t size) // making sure no partial writes Loop it through //
-{
-	ssize_t total_written = 0;
-	while (total_written < static_cast<ssize_t>(size))
-	{
-		ssize_t written = write(fd, buf + total_written,
-					size - static_cast<size_t>(total_written));
-		if (written <= 0)
-		{
-			if (errno == EINTR) // Macro for signal interrupting the write process //
-				continue ;
-			return (-1);	
-		}
-		total_written += written; 
-	}
-	return (total_written); // return total amount of data written //
-}
+// ssize_t write_all(int fd, const char *buf, size_t size) // making sure no partial writes Loop it through //
+// {
+// 	ssize_t total_written = 0;
+// 	while (total_written < static_cast<ssize_t>(size))
+// 	{
+// 		ssize_t written = write(fd, buf + total_written,
+// 					size - static_cast<size_t>(total_written));
+// 		if (written <= 0)
+// 		{
+// 			if (errno == EINTR) // Macro for signal interrupting the write process //
+// 				continue ;
+// 			return (-1);	
+// 		}
+// 		total_written += written; 
+// 	}
+// 	return (total_written); // return total amount of data written //
+// }
 
 std::string getQueryString(const std::string &uri) // getting the query string on GET method //
 {
