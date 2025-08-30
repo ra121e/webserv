@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/08/28 20:54:40 by cgoh             ###   ########.fr        #
+#    Updated: 2025/08/29 18:17:58 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -22,9 +22,9 @@ SRC_S	=	$(patsubst %.cpp,$(SRC_DIR)/%.cpp,$(SRC_F_S))
 
 OBJ_DIR	=	obj
 OBJ_S	=	$(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRC_F_S))
+S_DEP   =   $(OBJ_S:.o=.d)
 
 INC_DIR	=	.
-S_DEP	=	$(SRC_S:.cpp=.d)
 
 IFLAGS	=	-I$(INC_DIR)
 LDLIBS  =   -lbsd

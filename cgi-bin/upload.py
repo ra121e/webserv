@@ -167,7 +167,7 @@ def main():
                 out.write(f['data'])
             saved.append((f['filename'], filepath, len(f['data'])))
         except Exception as e:
-            error_page(f'Failed saving file {f['filename']}: {e}', 500, 'Internal Server Error')
+            error_page(f'Failed saving file {f["filename"]}: {e}', 500, 'Internal Server Error')
             return
 
     rows = ''.join(f"<tr><td>{html.escape(name)}</td><td>{size} bytes</td><td><code>{html.escape(os.path.relpath(path, tmp_dir))}</code></td></tr>" for name, path, size in saved)

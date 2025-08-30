@@ -1,4 +1,5 @@
 #include "Epoll.hpp"
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -9,6 +10,7 @@
 #include <fcntl.h>
 #include <sys/timerfd.h>
 #include <sys/types.h>
+#include <vector>
 #include "ConnectionExpiration.hpp"
 #include "Timer.hpp"
 #include "ClientConnection.hpp"
@@ -25,7 +27,7 @@ Epoll::~Epoll()
 	{
 		delete it->second;
 	}
-	for (std::map<int, CGI*>::iterator it = cgis.begin(); it != cgis.end(); ++it)
+	for (std::map<int, CGI*>::iterator it = server_pipe_read_fds.begin(); it != server_pipe_read_fds.end(); ++it)
 	{
 		delete it->second;
 	}
@@ -41,6 +43,19 @@ void	Epoll::addClient(int server_fd)
 	clients[client->getFd()] = client;
 	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + TIMEOUT));
 	timer.setTimer(TIMEOUT);
+}
+
+void	Epoll::addServer(int _fd, Server* server)
+{
+	servers[_fd] = server;
+	modifyEpoll(_fd, EPOLLIN, EPOLL_CTL_ADD);
+}
+
+void	Epoll::addPipeFds(CGI* cgi)
+{
+	server_pipe_read_fds[cgi->get_server_read_fd()] = cgi;
+	server_pipe_write_fds[cgi->get_server_write_fd()] = cgi;
+	modifyEpoll(cgi->get_server_read_fd(), EPOLLIN, EPOLL_CTL_ADD);
 }
 
 void	Epoll::handleEvents()
@@ -96,10 +111,16 @@ void	Epoll::handleEvents()
 				handleClientsAndCgis<ClientConnection>(ite->second, events[i].events, current_fd);
 				continue;
 			}
-			std::map<int, CGI*>::iterator itc = cgis.find(current_fd);
-			if (itc != cgis.end())
+			std::map<int, CGI*>::iterator itc = server_pipe_read_fds.find(current_fd);
+			if (itc != server_pipe_read_fds.end())
 			{
 				handleClientsAndCgis<CGI>(itc->second, events[i].events, current_fd);
+				continue;
+			}
+			std::map<int, CGI*>::iterator itw = server_pipe_write_fds.find(current_fd);
+			if (itw != server_pipe_write_fds.end())
+			{
+				forwardRequestToCgi(itw->first, itw->second);
 				continue;
 			}
 			throw std::runtime_error("Unknown file descriptor in epoll events");
@@ -125,15 +146,15 @@ void	Epoll::modifyEpoll(int _fd, uint32_t _events, int mode) const
 }
 
 template<>
-void	Epoll::addToMap(int _fd, Server* resource)
+void	Epoll::addFdToEpoll(int _fd, Server* resource)
 {
 	servers[_fd] = resource;
 }
 
 template<>
-void	Epoll::addToMap(int _fd, CGI* resource)
+void	Epoll::addFdToEpoll(int _fd, CGI* resource)
 {
-	cgis[_fd] = resource;
+	server_pipe_read_fds[_fd] = resource;
 }
 
 template<>
@@ -146,7 +167,7 @@ void	Epoll::removeResource(int resourceFd, ClientConnection* resource)
 template<>
 void	Epoll::removeResource(int resourceFd, CGI* resource)
 {
-	cgis.erase(resourceFd);
+	server_pipe_read_fds.erase(resourceFd);
 	delete resource;
 }
 
@@ -165,7 +186,7 @@ void	Epoll::handleReadError(int resourceFd, CGI* resource)
 }
 
 template<>
-bool	Epoll::handleReadFromClient(ClientConnection* resource, int event_fd, const char* buf, ssize_t bytes_read)
+bool	Epoll::handleReadFromResource(ClientConnection* resource, int event_fd, const char* buf, ssize_t bytes_read)
 {
 	time_t current_time = time(NULL);
 	expiry_queue.push(ConnectionExpiration(event_fd, current_time + TIMEOUT));
@@ -176,36 +197,40 @@ bool	Epoll::handleReadFromClient(ClientConnection* resource, int event_fd, const
 }
 
 template<>
-bool	Epoll::handleReadFromClient(CGI* resource, int event_fd, const char* buf, ssize_t bytes_read)
+bool	Epoll::handleReadFromResource(CGI* resource, int event_fd, const char* buf, ssize_t bytes_read)
 {
 	(void)resource;
 	(void)event_fd;
 	(void)buf;
 	(void)bytes_read;
 	delete resource; // For CGI, we don't need to keep reading from the pipe after the initial read
-	cgis.erase(event_fd);
+	server_pipe_read_fds.erase(event_fd);
 	return true; // Always return true for CGI as we don't parse requests here
 }
 
 template<>
-void	Epoll::prepWriteToClient(ClientConnection* resource, const char* buf)
+void	Epoll::prepRequestFrom(ClientConnection* resource)
 {
-	(void)buf; // Unused parameter
 	resource->makeResponse(*this);
+	if (resource->getRequest().forward_to_cgi)
+	{
+		// If the request was forwarded to CGI, we don't need to send a response here
+		return;
+	}
 	modifyEpoll(resource->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
 }
 
 template<>
-void	Epoll::prepWriteToClient(CGI* resource, const char* buf)
+void	Epoll::prepRequestFrom(CGI* resource)
 {
-	resource->writeToInputBuffer(buf);
-	modifyEpoll(resource->get_client()->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+	modifyEpoll(resource->get_server_write_fd(), EPOLLOUT, EPOLL_CTL_MOD);
 }
 
-template<>
-void	Epoll::handleServerWrite(CGI* resource, int event_fd)
+void	Epoll::forwardRequestToCgi(int write_fd, CGI* cgi)
 {
-	write(event_fd, resource->getInputBuffer().c_str(), resource->getInputBuffer().size());
+	const std::string& input = cgi->get_client()->getBuffer();
+	write(write_fd, input.c_str(), input.size());
+	cgi->close_server_write_fd();
 }
 
 template<>

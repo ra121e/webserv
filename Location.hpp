@@ -22,7 +22,6 @@ class Location
 	void	parse_route_index(std::istringstream& iss);
 	void	parse_route_cgi_extensions(std::istringstream& iss);
 	void	parse_route_redirect(std::istringstream& iss);
-	static bool	filename_ends_with(const std::string &filename, const std::string &extension);
 
 
 	public:
@@ -41,7 +40,7 @@ class Location
 	bool	getIsRedirect() const;
 	const std::string&	getRedirectTarget() const;
 	int	getRedirectCode() const;
-	bool	is_cgi_extension(const std::string &filename) const;
+	bool	supports_cgi_extension(const std::string &extension) const;
 };
 
 #endif

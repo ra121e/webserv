@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:36:16 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/13 20:09:56 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/30 20:51:11 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ class HttpRequest
 
 		std::string	method;
 		std::string	uri;
+		std::string	extension;
 		std::string	version;
 
 		std::map<std::string, std::string>	headers;
@@ -34,6 +35,7 @@ class HttpRequest
 		bool	body_too_large;
 		bool	is_bad;
 		bool	content_length_missing;
+		bool	forward_to_cgi;
 		size_t	header_end_pos;
 		size_t	content_length;
 	private:

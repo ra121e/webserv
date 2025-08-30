@@ -1,6 +1,7 @@
 #include "Location.hpp"
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 Location::Location() : autoindex(false), is_redirect(false), redirect_code(0)
 {
@@ -196,23 +197,7 @@ int	Location::getRedirectCode() const
 	return (redirect_code);
 }
 
-bool Location::is_cgi_extension(const std::string &filename) const
+bool Location::supports_cgi_extension(const std::string &extension) const
 {
-	for (std::vector<std::string>::const_iterator it = cgi_extensions.begin(); it != cgi_extensions.end(); ++it)
-	{
-		if (filename_ends_with(filename, *it))
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-bool	Location::filename_ends_with(const std::string &filename, const std::string &extension)
-{
-	if (filename.length() < extension.length())
-	{
-		return false;
-	}
-	return filename.compare(filename.length() - extension.length(), extension.length(), extension) == 0;
+	return std::find(cgi_extensions.begin(), cgi_extensions.end(), extension) != cgi_extensions.end();
 }

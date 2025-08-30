@@ -107,12 +107,7 @@ ClientConnection*	CGI::get_client() const
 	return client;
 }
 
-void	CGI::writeToInputBuffer(const std::string& data)
+void	CGI::close_server_write_fd()
 {
-	input_buffer.append(data);
-}
-
-const std::string&	CGI::getInputBuffer() const
-{
-	return input_buffer;
+	server_write_cgi_read_pipe[STDOUT_FILENO].closeFd();
 }

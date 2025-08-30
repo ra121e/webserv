@@ -17,7 +17,6 @@ private:
 	char	**envp; // environment pointer for execve
 	ClientConnection* client; // Pointer to the associated ClientConnection
 	time_t	expiry;
-	std::string	input_buffer;
 
 	CGI(const CGI& other);
 	CGI& operator=(const CGI& other);
@@ -32,8 +31,7 @@ public:
 	void	execute_cgi();
 	void	get_cgi_response();
 	void	close_pipes();
-	void	writeToInputBuffer(const std::string& data);
-	const std::string&	getInputBuffer() const;
+	void	close_server_write_fd();
 };
 
 #endif

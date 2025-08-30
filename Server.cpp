@@ -195,16 +195,19 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
-const Location&	Server::getLocation(std::string const &uri) const
+const Location&	Server::getLocation(std::string const &uri, const std::string& extension) const
 {
 	std::string clean_uri = uri;
 	size_t pos = clean_uri.find('?');
 	if (pos != std::string::npos)
 		clean_uri.erase(pos);
-	
 	for (std::map<std::string, Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
 	{
 		const std::string& path = it->first;
+		if (!extension.empty() && it->second.supports_cgi_extension(extension))
+		{
+			return it->second;
+		}
 		if (path[path.size() - 1] == '/' && path != "/")
 		{
 			size_t	final_slash_pos = clean_uri.rfind("/");

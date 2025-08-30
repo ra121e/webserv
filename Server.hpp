@@ -34,7 +34,7 @@ public:
 	void	setClientMaxBodySize(uint64_t _client_max_body_size);
 	void	addErrorPage(const std::string& error, const std::string& page);
 	void	addLocation(const std::string& path, const Location& location);
-	const Location&	getLocation(std::string const &uri) const;
+	const Location&	getLocation(std::string const &uri, const std::string& extension) const;
 	const std::map<std::string, Location> &getLocations() const;
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;

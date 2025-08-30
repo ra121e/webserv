@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/28 20:31:54 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/08/30 21:38:29 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,6 +164,10 @@ bool	ClientConnection::parseRequest()
 
 		// first line
 		ss >> request.method >> request.uri >> request.version;
+		if (request.uri.rfind('.') != std::string::npos)
+		{
+			request.extension = request.uri.substr(request.uri.rfind('.'));
+		}
 
 		// header main part
 		size_t	request_line_end = header_string.find("\r\n");
@@ -311,7 +315,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 				std::vector<std::string>());
 			return;
 		}
-		const Location&	loc = server->getLocation(request.uri);
+		const Location&	loc = server->getLocation(request.uri, request.extension);
 		if (loc.getIsRedirect())
 		{
 			response.addHeader("Location", loc.getRedirectTarget());
@@ -328,9 +332,11 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 					loc.getMethods());
 			return ;
 		}
-		if (loc.is_cgi_extension(request.uri))
+		if (!request.extension.empty())
 		{
 			run_cgi_script(request.uri, epoll);
+			request.forward_to_cgi = true;
+			buffer.clear(); // Clear buffer to avoid re-processing
 			return;
 		}
 		// if (is_cgi_script(request.uri))
@@ -542,7 +548,7 @@ void	ClientConnection::run_cgi_script(const std::string& script_path, Epoll& epo
 			break;
 		default:
 			cgi->close_pipes();
-			epoll.addResource<CGI>(cgi->get_server_read_fd(), cgi);
+			epoll.addPipeFds(cgi);
 			if (request.method == "POST")
 			{
 				epoll.modifyEpoll(cgi->get_server_write_fd(), EPOLLOUT, EPOLL_CTL_ADD);
