@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/30 21:38:29 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/02 19:57:48 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -141,6 +141,11 @@ void	ClientConnection::setTimedOut(bool timeout)
 void	ClientConnection::appendToBuffer(char const *data, size_t size)
 {
 	buffer.append(data, size);
+}
+
+void	ClientConnection::appendToResBuffer(char const *data, size_t size)
+{
+	res_buffer.append(data, size);
 }
 
 bool	ClientConnection::parseRequest()
@@ -315,7 +320,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 				std::vector<std::string>());
 			return;
 		}
-		const Location&	loc = server->getLocation(request.uri, request.extension);
+		const Location&	loc = server->getLocation(request.uri, request.extension, request);
 		if (loc.getIsRedirect())
 		{
 			response.addHeader("Location", loc.getRedirectTarget());
@@ -332,11 +337,9 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 					loc.getMethods());
 			return ;
 		}
-		if (!request.extension.empty())
+		if (request.forward_to_cgi)
 		{
 			run_cgi_script(request.uri, epoll);
-			request.forward_to_cgi = true;
-			buffer.clear(); // Clear buffer to avoid re-processing
 			return;
 		}
 		// if (is_cgi_script(request.uri))

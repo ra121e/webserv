@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/30 21:11:13 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/02 17:08:34 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		void	setTimedOut(bool timeout);
 
 		void	appendToBuffer(char const *data, size_t size);
+		void	appendToResBuffer(char const *data, size_t size);
 		bool	parseRequest();
 		void	makeResponse(Epoll& epoll);
 		bool	sendResponse();

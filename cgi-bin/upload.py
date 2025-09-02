@@ -8,7 +8,7 @@ import os, sys, html, re, traceback
 # Utility functions
 
 def send_response(body, status_code=200, status_text='OK', content_type='text/html; charset=utf-8'):
-    sys.stdout.write(f"Status: {status_code} {status_text}\r\n")
+    sys.stdout.write(f"HTTP/1.1 {status_code} {status_text}\r\n")
     sys.stdout.write(f"Content-Type: {content_type}\r\n\r\n")
     sys.stdout.write(body)
 

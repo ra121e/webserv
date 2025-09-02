@@ -120,10 +120,9 @@ void	Epoll::handleEvents()
 			std::map<int, CGI*>::iterator itw = server_pipe_write_fds.find(current_fd);
 			if (itw != server_pipe_write_fds.end())
 			{
-				forwardRequestToCgi(itw->first, itw->second);
+				handleClientsAndCgis<CGI>(itw->second, events[i].events, current_fd);
 				continue;
 			}
-			throw std::runtime_error("Unknown file descriptor in epoll events");
 		}
 	}
 }
@@ -158,16 +157,16 @@ void	Epoll::addFdToEpoll(int _fd, CGI* resource)
 }
 
 template<>
-void	Epoll::removeResource(int resourceFd, ClientConnection* resource)
+void	Epoll::removeResource(int _fd, ClientConnection* resource)
 {
-	clients.erase(resourceFd);
+	clients.erase(_fd);
 	delete resource;
 }
 
 template<>
-void	Epoll::removeResource(int resourceFd, CGI* resource)
+void	Epoll::removeResource(int _fd, CGI* resource)
 {
-	server_pipe_read_fds.erase(resourceFd);
+	server_pipe_read_fds.erase(_fd);
 	delete resource;
 }
 
@@ -199,10 +198,8 @@ bool	Epoll::handleReadFromResource(ClientConnection* resource, int event_fd, con
 template<>
 bool	Epoll::handleReadFromResource(CGI* resource, int event_fd, const char* buf, ssize_t bytes_read)
 {
-	(void)resource;
 	(void)event_fd;
-	(void)buf;
-	(void)bytes_read;
+	resource->get_client()->appendToResBuffer(buf, static_cast<size_t>(bytes_read));
 	return true; // Always return true for CGI as we don't parse requests here
 }
 
@@ -226,13 +223,6 @@ void	Epoll::prepRequestFrom(CGI* resource)
 	delete resource;
 }
 
-void	Epoll::forwardRequestToCgi(int write_fd, CGI* cgi)
-{
-	const std::string& input = cgi->get_client()->getBuffer();
-	write(write_fd, input.c_str(), input.size());
-	cgi->close_server_write_fd();
-}
-
 template<>
 void	Epoll::handleServerWrite(ClientConnection* resource, int event_fd)
 {
@@ -241,4 +231,14 @@ void	Epoll::handleServerWrite(ClientConnection* resource, int event_fd)
 		clients.erase(event_fd);
 		delete resource;
 	}
+}
+
+template<>
+void	Epoll::handleServerWrite(CGI* resource, int event_fd)
+{
+	const std::string& input = resource->get_client()->getBuffer();
+	write(event_fd, input.c_str(), input.size());
+	modifyEpoll(event_fd, 0, EPOLL_CTL_DEL);
+	resource->close_server_write_fd();
+	server_pipe_write_fds.erase(event_fd);
 }

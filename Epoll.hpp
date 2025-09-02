@@ -38,7 +38,6 @@ private:
 	void	handleServerWrite(T* resource, int event_fd);
 	template<typename T>
 	void	addFdToEpoll(int _fd, T* resource);
-	static void	forwardRequestToCgi(int write_fd, CGI* cgi);
 public:
 	Epoll(int _fd);
 	~Epoll();
@@ -102,11 +101,4 @@ void	Epoll::handleClientsAndCgis(T* resource, uint32_t _events, int event_fd)
 	{
 		handleServerWrite<T>(resource, event_fd);
 	}
-}
-
-template<typename T>
-void	Epoll::handleServerWrite(T* resource, int event_fd)
-{
-	(void)resource; // Unused parameter
-	(void)event_fd; // Unused parameter
 }

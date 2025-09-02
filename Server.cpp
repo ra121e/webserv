@@ -195,7 +195,7 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
-const Location&	Server::getLocation(std::string const &uri, const std::string& extension) const
+const Location&	Server::getLocation(std::string const &uri, const std::string& extension, HttpRequest& request) const
 {
 	std::string clean_uri = uri;
 	size_t pos = clean_uri.find('?');
@@ -206,6 +206,7 @@ const Location&	Server::getLocation(std::string const &uri, const std::string& e
 		const std::string& path = it->first;
 		if (!extension.empty() && it->second.supports_cgi_extension(extension))
 		{
+			request.forward_to_cgi = true;
 			return it->second;
 		}
 		if (path[path.size() - 1] == '/' && path != "/")
