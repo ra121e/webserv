@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/02 19:57:48 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/02 20:33:37 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -342,23 +342,6 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 			run_cgi_script(request.uri, epoll);
 			return;
 		}
-		// if (is_cgi_script(request.uri))
-		// {
-		// 	std::cout << "getAlias : " << loc.getAlias() << std::endl;
-		// 	std::cout << "getUri : " << request.uri << std::endl;
-		// 	std::string uri_path = request.uri;
-		// 	if (uri_path.rfind("/cgi-bin/", 0) == 0)
-		// 		uri_path = uri_path.substr(9);
-		// 	std::cout << "uriPath : " << uri_path << std::endl;
-		// 	std::string script_path = loc.getAlias() + uri_path;
-		// 	std::cout << "script_path" << script_path << std::endl;
-		// 	int	ret = run_cgi_script(*this, script_path, *(getServer()->getNetworks()[0]));
-		// 	if (ret != 0)
-		// 		sendErrorResponse(INTERNAL_SERVER_ERROR, "CGI Excecution failed",
-		// 			server->getErrorPage(INTERNAL_SERVER_ERROR),
-		// 			std::vector<std::string>());
-		// 	return ;
-		// }
 		if (request.method == POST)
 		{
 			if (request.content_length_missing)

@@ -64,28 +64,6 @@ void	CGI::execute_cgi()
 	throw std::runtime_error("execve failed: " + std::string(strerror(errno)));
 }
 
-// void	CGI::get_cgi_response()
-// {
-	
-// 	if (env_map["REQUEST_METHOD"] == "POST")
-// 	{
-// 		const std::string &body = req.body;
-// 		if (!body.empty())
-// 		{
-// 			if (write_all(server_write_cgi_read_pipe[1], body.c_str(), body.size()) == -1) // if post method, write data all to stdin // 
-// 			{
-// 				perror("Write to CGI stdin failed");
-// 				kill(pid, SIGKILL); // if failure, kill off the child and close all the pipes and free cgi_envp memory // 
-// 				close(server_write_cgi_read_pipe[1]);
-// 				close(server_read_cgi_write_pipe[0]);
-// 				free_envp(cgi_envp);
-// 				return (-1);
-// 			}
-// 		}
-// 	}
-// 	close(server_write_cgi_read_pipe[1]); // once data is written to stdin pipe, close off the pipe since no longer used // 
-// }
-
 void	CGI::close_pipes()
 {
 	server_write_cgi_read_pipe[STDIN_FILENO].closeFd();

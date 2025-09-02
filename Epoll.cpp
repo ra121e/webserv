@@ -1,7 +1,9 @@
 #include "Epoll.hpp"
 #include <algorithm>
 #include <cerrno>
+#include <cstddef>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <map>
@@ -10,6 +12,8 @@
 #include <fcntl.h>
 #include <sys/timerfd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <vector>
 #include "ConnectionExpiration.hpp"
 #include "Timer.hpp"
@@ -200,7 +204,8 @@ bool	Epoll::handleReadFromResource(CGI* resource, int event_fd, const char* buf,
 {
 	(void)event_fd;
 	resource->get_client()->appendToResBuffer(buf, static_cast<size_t>(bytes_read));
-	return true; // Always return true for CGI as we don't parse requests here
+	while (waitpid(-1, NULL, 0) > 0);
+	return true;
 }
 
 template<>
