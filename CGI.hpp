@@ -16,7 +16,6 @@ private:
 	std::map<std::string, std::string> env_map; // environment variables for the CGI script
 	char	**envp; // environment pointer for execve
 	ClientConnection* client; // Pointer to the associated ClientConnection
-	time_t	expiry;
 
 	CGI(const CGI& other);
 	CGI& operator=(const CGI& other);

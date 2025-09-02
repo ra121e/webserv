@@ -141,7 +141,7 @@ void	Epoll::modifyEpoll(int _fd, uint32_t _events, int mode) const
 
 	if (epoll_ctl(getFd(), mode, _fd, &event) == -1)
 	{
-		throw std::runtime_error(strerror(errno));
+		throw std::runtime_error("epoll_ctl: " + std::string(strerror(errno)));
 	}
 }
 
@@ -203,8 +203,6 @@ bool	Epoll::handleReadFromResource(CGI* resource, int event_fd, const char* buf,
 	(void)event_fd;
 	(void)buf;
 	(void)bytes_read;
-	delete resource; // For CGI, we don't need to keep reading from the pipe after the initial read
-	server_pipe_read_fds.erase(event_fd);
 	return true; // Always return true for CGI as we don't parse requests here
 }
 
@@ -223,7 +221,9 @@ void	Epoll::prepRequestFrom(ClientConnection* resource)
 template<>
 void	Epoll::prepRequestFrom(CGI* resource)
 {
-	modifyEpoll(resource->get_server_write_fd(), EPOLLOUT, EPOLL_CTL_MOD);
+	modifyEpoll(resource->get_client()->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+	server_pipe_read_fds.erase(resource->get_server_read_fd());
+	delete resource;
 }
 
 void	Epoll::forwardRequestToCgi(int write_fd, CGI* cgi)
