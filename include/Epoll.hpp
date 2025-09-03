@@ -1,6 +1,7 @@
 #ifndef EPOLL_HPP
 #define EPOLL_HPP
 #include <cstdio>
+#include <ctime>
 #include <functional>
 #include <map>
 #include <queue>
@@ -26,9 +27,12 @@ private:
 	std::map<int, CGI*>	server_pipe_write_fds;
 	static const int	MAX_EVENTS = 64;
 	struct epoll_event	events[MAX_EVENTS];
-	Timer	timer;
-	static const time_t	TIMEOUT = 10;
+	Timer	request_timer;
+	Timer	cgi_timer;
+	static const time_t	REQUEST_TIMEOUT = 10;
+	static const time_t	CGI_TIMEOUT = 3;
 	std::priority_queue<ConnectionExpiration, std::vector<ConnectionExpiration>, std::greater<ConnectionExpiration> >	expiry_queue;
+	std::map<time_t, CGI*>	cgi_expiry_map;
 
 	Epoll(const Epoll& other);
 	Epoll&	operator=(const Epoll& other);
@@ -38,13 +42,14 @@ private:
 	void	handleServerWrite(T* resource, int event_fd);
 	template<typename T>
 	void	addFdToEpoll(int _fd, T* resource);
+	void	handleRequestTimeOut();
+	void	handleCgiTimeOut();
 public:
 	Epoll(int _fd);
 	~Epoll();
 	void	addClient(int server_fd);
 	void	addServer(int _fd, Server* server);
 	void	handleEvents();
-	void	addTimer();
 	void	modifyEpoll(int _fd, uint32_t _events, int mode) const;
 	void	addPipeFds(CGI* cgi);
 	template<typename T>
@@ -55,6 +60,7 @@ public:
 	bool	handleReadFromResource(T* resource, int event_fd, const char* buf, ssize_t bytes_read);
 	template<typename T>
 	void	prepRequestFrom(T* resource);
+	void	addCgiExpiry(CGI* cgi);
 };
 
 #endif

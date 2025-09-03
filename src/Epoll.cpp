@@ -1,5 +1,4 @@
-#include "Epoll.hpp"
-#include <algorithm>
+#include "../include/Epoll.hpp"
 #include <cerrno>
 #include <cstddef>
 #include <cstdio>
@@ -14,15 +13,16 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <vector>
-#include "ConnectionExpiration.hpp"
-#include "Timer.hpp"
-#include "ClientConnection.hpp"
-#include "CGI.hpp"
-#include "Server.hpp"
+#include "../include/ConnectionExpiration.hpp"
+#include "../include/Timer.hpp"
+#include "../include/ClientConnection.hpp"
+#include "../include/CGI.hpp"
+#include "../include/Server.hpp"
 
 Epoll::Epoll(int _fd): BaseFile(_fd), events()
 {
+	modifyEpoll(request_timer.getFd(), EPOLLIN, EPOLL_CTL_ADD);
+	modifyEpoll(cgi_timer.getFd(), EPOLLIN, EPOLL_CTL_ADD);
 }
 
 Epoll::~Epoll()
@@ -41,12 +41,12 @@ Epoll::~Epoll()
 void	Epoll::addClient(int server_fd)
 {
 	time_t				current_time = time(NULL);
-	ClientConnection	*client = new ClientConnection(server_fd, servers[server_fd], current_time + TIMEOUT);
+	ClientConnection	*client = new ClientConnection(server_fd, servers[server_fd], current_time + REQUEST_TIMEOUT);
 
 	modifyEpoll(client->getFd(), EPOLLIN, EPOLL_CTL_ADD);
 	clients[client->getFd()] = client;
-	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + TIMEOUT));
-	timer.setTimer(TIMEOUT);
+	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + REQUEST_TIMEOUT));
+	request_timer.setTimer(REQUEST_TIMEOUT);
 }
 
 void	Epoll::addServer(int _fd, Server* server)
@@ -80,32 +80,13 @@ void	Epoll::handleEvents()
 		{
 			addClient(current_fd);
 		}
-		else if (current_fd == timer.getFd())
+		else if (current_fd == request_timer.getFd())
 		{
-			uint64_t expirations = 0;
-			read(timer.getFd(), &expirations, sizeof(expirations));
-
-			while (!expiry_queue.empty() && expiry_queue.top().getExpiration() <= time(NULL))
-			{
-				ConnectionExpiration	exp = expiry_queue.top();
-				expiry_queue.pop();
-				std::map<int, ClientConnection*>::iterator client_it = clients.find(exp.getFd());
-				if (client_it != clients.end())
-				{
-					ClientConnection* client = client_it->second;
-					if (client->getExpiration() != exp.getExpiration())
-					{
-						continue;
-					}
-					client->setTimedOut(true);
-					client->makeResponse(*this);
-					modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
-				}
-			}
-			if (!expiry_queue.empty())
-			{
-				timer.setTimer(expiry_queue.top().getExpiration() - time(NULL));
-			}
+			handleRequestTimeOut();
+		}
+		else if (current_fd == cgi_timer.getFd())
+		{
+			handleCgiTimeOut();
 		}
 		else
 		{
@@ -129,11 +110,6 @@ void	Epoll::handleEvents()
 			}
 		}
 	}
-}
-
-void	Epoll::addTimer()
-{
-	modifyEpoll(timer.getFd(), EPOLLIN, EPOLL_CTL_ADD);
 }
 
 void	Epoll::modifyEpoll(int _fd, uint32_t _events, int mode) const
@@ -192,9 +168,9 @@ template<>
 bool	Epoll::handleReadFromResource(ClientConnection* resource, int event_fd, const char* buf, ssize_t bytes_read)
 {
 	time_t current_time = time(NULL);
-	expiry_queue.push(ConnectionExpiration(event_fd, current_time + TIMEOUT));
-	resource->setExpiration(current_time + TIMEOUT);
-	timer.setTimer(expiry_queue.top().getExpiration() - current_time);
+	expiry_queue.push(ConnectionExpiration(event_fd, current_time + REQUEST_TIMEOUT));
+	resource->setExpiration(current_time + REQUEST_TIMEOUT);
+	request_timer.setTimer(expiry_queue.top().getExpiration() - current_time);
 	resource->appendToBuffer(buf, static_cast<size_t>(bytes_read));
 	return resource->parseRequest();
 }
@@ -246,4 +222,65 @@ void	Epoll::handleServerWrite(CGI* resource, int event_fd)
 	modifyEpoll(event_fd, 0, EPOLL_CTL_DEL);
 	resource->close_server_write_fd();
 	server_pipe_write_fds.erase(event_fd);
+}
+
+void	Epoll::handleRequestTimeOut()
+{
+	uint64_t expirations = 0;
+	read(request_timer.getFd(), &expirations, sizeof(expirations));
+
+	while (!expiry_queue.empty() && expiry_queue.top().getExpiration() <= time(NULL))
+	{
+		ConnectionExpiration	exp = expiry_queue.top();
+		expiry_queue.pop();
+		std::map<int, ClientConnection*>::iterator client_it = clients.find(exp.getFd());
+		if (client_it != clients.end())
+		{
+			ClientConnection* client = client_it->second;
+			if (client->getExpiration() != exp.getExpiration())
+			{
+				continue;
+			}
+			client->setTimedOut(true);
+			client->makeResponse(*this);
+			modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+		}
+	}
+	if (!expiry_queue.empty())
+	{
+		request_timer.setTimer(expiry_queue.top().getExpiration() - time(NULL));
+	}
+}
+
+void	Epoll::handleCgiTimeOut()
+{
+	uint64_t expirations = 0;
+	read(cgi_timer.getFd(), &expirations, sizeof(expirations));
+
+	while (!cgi_expiry_map.empty() && cgi_expiry_map.begin()->first <= time(NULL))
+	{
+		CGI*	cgi = cgi_expiry_map.begin()->second;
+		cgi_expiry_map.erase(cgi_expiry_map.begin());
+		std::map<int, ClientConnection*>::iterator client_it = clients.find(cgi->get_client()->getFd());
+		if (client_it != clients.end())
+		{
+			kill(cgi->getPid(), SIGKILL);
+			waitpid(cgi->getPid(), NULL, 0);
+			ClientConnection* client = client_it->second;
+			client->setServerError(true);
+			client->makeResponse(*this);
+			modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+		}
+	}
+	if (!cgi_expiry_map.empty())
+	{
+		cgi_timer.setTimer(cgi_expiry_map.begin()->first - time(NULL));
+	}
+}
+
+void	Epoll::addCgiExpiry(CGI* cgi)
+{
+	time_t	now = time(NULL);
+	cgi_expiry_map[now + CGI_TIMEOUT] = cgi;
+	cgi_timer.setTimer(cgi_expiry_map.begin()->first - now);
 }

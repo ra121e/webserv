@@ -1,5 +1,5 @@
-#include "Server.hpp"
-#include "Network.hpp"
+#include "../include/Server.hpp"
+#include "../include/Network.hpp"
 #include <cerrno>
 #include <cstddef>
 #include <cstring>

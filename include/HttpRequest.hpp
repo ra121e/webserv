@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:36:16 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/30 20:51:11 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/03 19:05:52 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,10 +26,8 @@ class HttpRequest
 		std::string	uri;
 		std::string	extension;
 		std::string	version;
-
 		std::map<std::string, std::string>	headers;
 		std::string	body;
-
 		bool	is_header_parse;
 		bool	waiting_for_body;
 		bool	body_too_large;
@@ -38,6 +36,13 @@ class HttpRequest
 		bool	forward_to_cgi;
 		size_t	header_end_pos;
 		size_t	content_length;
+
+		std::string getQueryString() const;
+		std::string getContentLength() const;
+		std::string getContentType() const;
+		std::string getScriptName() const;
+		std::string getCookie() const;
+		std::string getPathInfo() const;
 	private:
 
 };

@@ -4,6 +4,7 @@
 #include <ctime>
 #include <map>
 #include <string>
+#include <sys/types.h>
 
 // Forward declaration to avoid circular dependency
 class ClientConnection;
@@ -16,6 +17,7 @@ private:
 	std::map<std::string, std::string> env_map; // environment variables for the CGI script
 	char	**envp; // environment pointer for execve
 	ClientConnection* client; // Pointer to the associated ClientConnection
+	pid_t	pid;
 
 	CGI(const CGI& other);
 	CGI& operator=(const CGI& other);
@@ -31,6 +33,8 @@ public:
 	void	get_cgi_response();
 	void	close_pipes();
 	void	close_server_write_fd();
+	void	setPid(pid_t _pid);
+	pid_t	getPid() const;
 };
 
 #endif

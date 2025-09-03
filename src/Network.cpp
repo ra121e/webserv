@@ -1,4 +1,4 @@
-#include "Network.hpp"
+#include "../include/Network.hpp"
 #include <asm-generic/socket.h>
 #include <cerrno>
 #include <cstring>

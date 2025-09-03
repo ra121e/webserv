@@ -1,4 +1,4 @@
-#include "Location.hpp"
+#include "../include/Location.hpp"
 #include <sstream>
 #include <string>
 #include <algorithm>

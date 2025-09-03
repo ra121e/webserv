@@ -1,4 +1,4 @@
-#include "CGI.hpp"
+#include "../include/CGI.hpp"
 #include <cstddef>
 #include <string>
 #include <unistd.h>
@@ -7,9 +7,9 @@
 #include <stdexcept>
 #include <cerrno>
 #include <bsd/string.h>
-#include "ClientConnection.hpp"
+#include "../include/ClientConnection.hpp"
 
-CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client)
+CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client), pid(0)
 {
 }
 
@@ -88,4 +88,14 @@ ClientConnection*	CGI::get_client() const
 void	CGI::close_server_write_fd()
 {
 	server_write_cgi_read_pipe[STDOUT_FILENO].closeFd();
+}
+
+void	CGI::setPid(pid_t _pid)
+{
+	pid = _pid;
+}
+
+pid_t	CGI::getPid() const
+{
+	return pid;
 }

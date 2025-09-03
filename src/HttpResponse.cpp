@@ -6,11 +6,11 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/08 09:02:49 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 18:42:22 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/03 17:44:37 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "HttpResponse.hpp"
+#include "../include/HttpResponse.hpp"
 #include <sstream>
 
 void	HttpResponse::addHeader(std::string const &key, std::string const &value)

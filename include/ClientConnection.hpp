@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/02 17:08:34 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/03 21:56:21 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,6 @@
 #include <unistd.h>
 #include "BaseFile.hpp"
 #include "BaseExpiration.hpp"
-#include "cgi_handler.hpp"
 
 class Epoll; // forward declaration
 class CGI;   // forward declaration
@@ -54,7 +53,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		void	makeResponse(Epoll& epoll);
 		bool	sendResponse();
 		static void	retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len);
-		void	run_cgi_script(const std::string& script_path, Epoll& epoll);
+		void	run_cgi_script(Epoll& epoll);
 
 	private:
 		socklen_t			addr_len;

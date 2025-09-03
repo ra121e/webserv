@@ -6,11 +6,11 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/30 22:13:04 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/03 21:42:56 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "main.hpp"
+#include "../include/main.hpp"
 #include <cerrno>
 #include <csignal>
 #include <exception>
@@ -18,9 +18,9 @@
 #include <string>
 #include <sys/epoll.h>
 #include <iostream>
-#include "TmpDirCleaner.hpp"
-#include "Config.hpp"
-#include "Epoll.hpp"
+#include "../include/TmpDirCleaner.hpp"
+#include "../include/Config.hpp"
+#include "../include/Epoll.hpp"
 
 // Signal-safe run flag
 static volatile sig_atomic_t g_run = 1;
@@ -57,7 +57,6 @@ int	main(int argc, char **argv)
 			}
 		}
 		std::signal(SIGINT, handle_sigint_c);
-		epoll.addTimer();
 		while (g_run != 0)
 		{
 			epoll.handleEvents();
