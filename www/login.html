@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>User Login</title>
+  <link rel="stylesheet" href="/style">
+  <style>
+    form { max-width: 380px; margin: 12px auto; }
+    .field { margin-bottom: 14px; }
+    label { display:block; font-weight:600; margin-bottom:4px; }
+    input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(148,163,184,.4); background:#0b1220; color:var(--text); }
+    input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+    button { background:linear-gradient(135deg,var(--accent),var(--accent-2)); border:none; color:#fff; padding:10px 18px; border-radius:8px; font-weight:600; cursor:pointer; }
+    button:hover { filter:brightness(1.1); }
+    #login-status { margin-top:12px; font-weight:600; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="container header-inner">
+    <div class="brand"><span class="logo"></span>Login</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/status">Status</a>
+      <a href="/upload">Upload/Delete</a>
+      <a href="/uploads">Uploads</a>
+      <a href="/redirect">Redirection</a>
+      <a href="/register">Register</a>
+      <a href="/login">Login</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page">
+    <div class="card">
+      <h2>Login</h2>
+      <p class="muted">Demo login form. Integrate with your authentication backend to validate credentials.</p>
+      <form id="loginForm" method="post" action="/login">
+        <div class="field">
+          <label for="user">Username or Email</label>
+          <input id="user" name="user" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" required />
+        </div>
+        <button type="submit">Login</button>
+        <div id="login-status"></div>
+      </form>
+    </div>
+  </div>
+</main>
+<footer>
+  <p>&copy; 2025 My Web Server Project</p>
+</footer>
+<script>
+const loginForm = document.getElementById('loginForm');
+loginForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const status = document.getElementById('login-status');
+  const data = new FormData(loginForm);
+  try {
+    const res = await fetch('/login', { method:'POST', body:data });
+    if (res.ok){
+      status.textContent = '✅ Login success (demo only)';
+      status.style.color = '#22c55e';
+    } else if (res.status === 401) {
+      status.textContent = '❌ Invalid credentials';
+      status.style.color = '#f87171';
+    } else {
+      status.textContent = '❌ Failed: ' + res.status;
+      status.style.color = '#f87171';
+    }
+  } catch(err){
+    status.textContent = '❌ Error: ' + err;
+    status.style.color = '#f87171';
+  }
+});
+</script>
+</body>
+</html>

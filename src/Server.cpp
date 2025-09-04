@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include <fcntl.h>
+#include <algorithm>
 
 Server::Server() : client_max_body_size()
 {
@@ -259,4 +260,25 @@ const std::string& Server::getErrorPage(int code) const
 uint64_t Server::getClientMaxBodySize() const
 {
 	return client_max_body_size;
+}
+
+void	Server::addUser(const std::string& username, const std::string& password)
+{
+	users.push_back(User(username, password));
+}
+
+void	Server::addSessionId(const std::string& session_id)
+{
+	session_ids.push_back(session_id);
+}
+
+bool	Server::isValidSessionId(const std::string& session_id) const
+{
+	return std::find(session_ids.begin(), session_ids.end(), session_id) != session_ids.end();
+}
+
+bool	Server::authenticateUser(const std::string& username, const std::string& password) const
+{
+	User userToFind(username, password);
+	return std::find(users.begin(), users.end(), userToFind) != users.end();
 }

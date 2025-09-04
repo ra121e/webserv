@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/03 21:56:46 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/04 21:06:18 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -344,39 +344,13 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 		}
 		if (request.method == POST)
 		{
-			if (request.content_length_missing)
+			if (request.uri == "/login")
 			{
-				sendErrorResponse(CONTENT_LENGTH_MISSING, "Content-Length Missing",
-					server->getErrorPage(CONTENT_LENGTH_MISSING),
-					std::vector<std::string>());
-				return;
+				handleLogin();
 			}
-			const std::string& FILENAME_FIELD = "filename=\"";
-			size_t	filename_start_pos = request.body.find(FILENAME_FIELD);
-			size_t	filename_end_pos = request.body.find('\"', filename_start_pos + FILENAME_FIELD.size());
-			if (filename_start_pos != std::string::npos && filename_end_pos != std::string::npos)
+			else if (request.uri == "/register")
 			{
-				const std::string& filename = request.body.substr(filename_start_pos + FILENAME_FIELD.size(),
-					filename_end_pos - filename_start_pos - FILENAME_FIELD.size());
-				const std::string&	filepath = "tmp/" + filename;
-				std::ofstream	file(filepath.c_str(), std::ios::binary);
-				if (!file)
-				{
-					sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
-						server->getErrorPage(INTERNAL_SERVER_ERROR),
-						std::vector<std::string>());
-					return;
-				}
-				size_t	body_start_pos = request.body.find("\r\n\r\n");
-				size_t	body_end_pos = request.body.find("\r\n", body_start_pos + 4);
-				file << request.body.substr(body_start_pos + 4, body_end_pos - body_start_pos - 4);
-			}
-			else
-			{
-				sendErrorResponse(BAD_REQUEST, "Bad Request",
-					server->getErrorPage(BAD_REQUEST),
-					std::vector<std::string>());
-				return;
+				handleRegistration();
 			}
 		}
 		else if (request.method == DELETE)
@@ -539,4 +513,30 @@ void	ClientConnection::run_cgi_script(Epoll& epoll)
 			}
 			epoll.addCgiExpiry(cgi);
 	}
+}
+
+void	ClientConnection::handleLogin()
+{
+	return server->authenticateUser(request.getUsername(), request.getPassword());
+}
+
+void	ClientConnection::handleRegistration()
+{
+	const std::string	USERNAME_FIELD = "username=";
+	const std::string	PASSWORD_FIELD = "&password=";
+	
+	// Parse username and password from request body
+	std::size_t	username_pos = request.body.find(USERNAME_FIELD);
+	std::size_t	password_pos = request.body.find(PASSWORD_FIELD);
+	if (username_pos == std::string::npos || password_pos == std::string::npos)
+	{
+		sendErrorResponse(BAD_REQUEST, "Bad Request",
+			server->getErrorPage(BAD_REQUEST),
+			std::vector<std::string>());
+		return;
+	}
+	std::string username = request.body.substr(username_pos + USERNAME_FIELD.size(),
+	password_pos - (username_pos + USERNAME_FIELD.size()));
+	std::string password = request.body.substr(password_pos + PASSWORD_FIELD.size());
+	server->registerUser(username, password);
 }

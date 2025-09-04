@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Registration</title>
+    <link rel="stylesheet" href="/style">
+    <style>
+        form { max-width: 420px; margin: 12px auto; }
+        form .field { margin-bottom: 14px; }
+        label { display:block; font-weight:600; margin-bottom:4px; }
+        input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(148,163,184,.4); background:#0b1220; color:var(--text); }
+        input:focus { outline:2px solid var(--accent); border-color:var(--accent); }
+        button { background:linear-gradient(135deg,var(--accent),var(--accent-2)); border:none; color:#fff; padding:10px 18px; border-radius:8px; font-weight:600; cursor:pointer; }
+        button:hover { filter:brightness(1.1); }
+        #reg-status { margin-top:12px; font-weight:600; }
+    </style>
+</head>
+<body>
+<header>
+  <div class="container header-inner">
+    <div class="brand"><span class="logo"></span>Register</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/status">Status</a>
+      <a href="/upload">Upload/Delete</a>
+      <a href="/uploads">Uploads</a>
+      <a href="/redirect">Redirection</a>
+      <a href="/register">Register</a>
+      <a href="/login">Login</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page">
+    <div class="card">
+      <h2>Create an Account</h2>
+      <p class="muted">This is a front-end only demo form. Wire it to your backend/CGI to persist users.</p>
+      <form id="registerForm" method="post" action="/register">
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" required minlength="3" maxlength="32" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" name="password" required minlength="6" />
+        </div>
+        <div class="field">
+          <label for="confirm">Confirm Password</label>
+          <input id="confirm" type="password" name="confirm" required minlength="6" />
+        </div>
+        <button type="submit">Register</button>
+        <div id="reg-status"></div>
+      </form>
+    </div>
+  </div>
+</main>
+<footer>
+  <p>&copy; 2025 My Web Server Project</p>
+</footer>
+<script>
+const form = document.getElementById('registerForm');
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const pwd = form.password.value.trim();
+  const confirm = form.confirm.value.trim();
+  const status = document.getElementById('reg-status');
+  if (pwd !== confirm){
+    status.textContent = '❌ Passwords do not match';
+    status.style.color = '#f87171';
+    return;
+  }
+  const data = new FormData(form);
+  try {
+    const res = await fetch('/register', { method:'POST', body:data });
+    if (res.ok){
+      status.textContent = '✅ Registered';
+      status.style.color = '#22c55e';
+      form.reset();
+    } else {
+      status.textContent = '❌ Failed: ' + res.status;
+      status.style.color = '#f87171';
+    }
+  } catch(err){
+    status.textContent = '❌ Error: ' + err;
+    status.style.color = '#f87171';
+  }
+});
+</script>
+</body>
+</html>

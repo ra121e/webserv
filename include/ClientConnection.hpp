@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/03 21:56:21 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/04 20:45:02 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -93,6 +93,8 @@ class ClientConnection : public BaseFile, public BaseExpiration
                                         const std::vector<std::string> &allow_methods);
 		static std::string	makeIndexof(std::string const &path_dir, std::string const &uri);
 		static std::string	getFileExtension(const std::string& filepath);
+		void		handleLogin();
+		void		handleRegistration();
 };
 
 

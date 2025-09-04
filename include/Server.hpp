@@ -1,6 +1,7 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <string>
 #include <sys/types.h>
 #include <vector>
 #include <map>
@@ -9,6 +10,7 @@
 #include <sstream>
 #include "Location.hpp"
 #include "Network.hpp"
+#include "../include/User.hpp"
 
 class Server
 {
@@ -17,6 +19,8 @@ private:
 	uint64_t							client_max_body_size;
 	std::map<std::string, std::string>	error_pages;
 	std::map<std::string, Location>		locations;
+	std::vector<User>					users;
+	std::vector<std::string>			session_ids;
 	
 public:
 	Server();
@@ -38,6 +42,10 @@ public:
 	const std::vector<Network*>&	getNetworks() const;
 	const std::string& getErrorPage(int code) const;
 	uint64_t getClientMaxBodySize() const;
+	void	addUser(const std::string& username, const std::string& password);
+	bool	authenticateUser(const std::string& username, const std::string& password) const;
+	void	addSessionId(const std::string& session_id);
+	bool	isValidSessionId(const std::string& session_id) const;
 };
 
 #endif
