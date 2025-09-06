@@ -9,3 +9,8 @@ bool User::operator==(const User &other) const
 {
 	return username == other.username && password == other.password;
 }
+
+const std::string& User::getUsername() const
+{
+	return username;
+}

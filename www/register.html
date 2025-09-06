@@ -35,8 +35,7 @@
   <div class="page">
     <div class="card">
       <h2>Create an Account</h2>
-      <p class="muted">This is a front-end only demo form. Wire it to your backend/CGI to persist users.</p>
-      <form id="registerForm" method="post" action="/register">
+      <form id="registerForm" method="post" action="/register" enctype="application/x-www-form-urlencoded">
         <div class="field">
           <label for="username">Username</label>
           <input id="username" name="username" required minlength="3" maxlength="32" />
@@ -70,7 +69,7 @@ form.addEventListener('submit', async (e)=>{
     status.style.color = '#f87171';
     return;
   }
-  const data = new FormData(form);
+  const data = new URLSearchParams(new FormData(form));
   try {
     const res = await fetch('/register', { method:'POST', body:data });
     if (res.ok){

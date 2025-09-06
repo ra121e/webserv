@@ -12,6 +12,7 @@
 #include <vector>
 #include <fcntl.h>
 #include <algorithm>
+#include "../include/Exceptions.hpp"
 
 Server::Server() : client_max_body_size()
 {
@@ -223,7 +224,7 @@ const Location&	Server::getLocation(std::string const &uri, const std::string& e
 			return it->second;
 		}
 	}
-	throw std::runtime_error("Location not found");
+	throw ResourceNotFoundException();
 }
 
 const std::map<std::string, Location> &Server::getLocations() const
@@ -252,7 +253,7 @@ const std::string& Server::getErrorPage(int code) const
 	std::map<std::string, std::string>::const_iterator it = error_pages.find(codeStr);
 	if (it == error_pages.end())
 	{
-		throw std::invalid_argument("Error page not found for code: " + codeStr);
+		throw InternalServerErrorException();
 	}
 	return it->second;
 }
@@ -264,6 +265,13 @@ uint64_t Server::getClientMaxBodySize() const
 
 void	Server::addUser(const std::string& username, const std::string& password)
 {
+	for (std::vector<User>::const_iterator it = users.begin(); it != users.end(); ++it)
+	{
+		if (it->getUsername() == username)
+		{
+			throw ConflictException();
+		}
+	}
 	users.push_back(User(username, password));
 }
 

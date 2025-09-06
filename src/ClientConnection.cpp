@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/04 21:06:18 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/06 21:15:45 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,9 @@
 #include <sys/stat.h>
 #include "../include/CGI.hpp"
 #include "../include/Epoll.hpp"
+#include "../include/Exceptions.hpp"
+#include <iomanip>
+#include <vector>
 
 static const char* const	GET = "GET";
 static const char* const	POST = "POST";
@@ -294,31 +297,19 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 	{
 		if (request.is_bad)
 		{
-			sendErrorResponse(BAD_REQUEST, "Bad Request",
-				server->getErrorPage(BAD_REQUEST),
-				std::vector<std::string>());
-			return;
+			throw BadRequestException();
 		}
 		if (server_error)
 		{
-			sendErrorResponse(INTERNAL_SERVER_ERROR, "Internal Server Error",
-				server->getErrorPage(INTERNAL_SERVER_ERROR),
-				std::vector<std::string>());
-			return;
+			throw InternalServerErrorException();
 		}
 		if (timed_out)
 		{
-			sendErrorResponse(REQUEST_TIMEOUT, "Request Timeout",
-				server->getErrorPage(REQUEST_TIMEOUT),
-				std::vector<std::string>());
-			return;
+			throw RequestTimeoutException();
 		}
 		if (request.body_too_large)
 		{
-			sendErrorResponse(PAYLOAD_TOO_LARGE, "Payload Too Large",
-				server->getErrorPage(PAYLOAD_TOO_LARGE),
-				std::vector<std::string>());
-			return;
+			throw PayloadTooLargeException();
 		}
 		const Location&	loc = server->getLocation(request.uri, request.extension, request);
 		if (loc.getIsRedirect())
@@ -332,10 +323,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 		}
 		if (!loc.isMethod(request.method))
 		{
-			sendErrorResponse(METHOD_NOT_ALLOWED, "Method not allowed",
-				server->getErrorPage(METHOD_NOT_ALLOWED),
-					loc.getMethods());
-			return ;
+			throw MethodNotAllowedException();
 		}
 		if (request.forward_to_cgi)
 		{
@@ -360,11 +348,11 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 
 			if (unlink(("tmp/" + filename).c_str()) == -1)
 			{
-				StatusCode code = errno == ENOENT ? RESOURCE_NOT_FOUND : INTERNAL_SERVER_ERROR;
-				sendErrorResponse(code, "Internal Server Error",
-					server->getErrorPage(code),
-					std::vector<std::string>());
-				return;
+				if (errno == ENOENT)
+				{
+					throw ResourceNotFoundException();
+				}
+				throw InternalServerErrorException();
 			}
 		}
 		const std::string& filepath = loc.getAlias() + loc.getIndex();
@@ -377,10 +365,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 				std::ifstream	file(filepath.c_str(), std::ios::binary);
 				if (!file)
 				{
-					sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
-						server->getErrorPage(RESOURCE_NOT_FOUND),
-						std::vector<std::string>());
-					return ;
+					throw ResourceNotFoundException();
 				}
 
 				std::stringstream	ss;
@@ -415,20 +400,64 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 				}
 				else
 				{
-					sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
-						server->getErrorPage(RESOURCE_NOT_FOUND),
-						std::vector<std::string>());
-					return ;
+					throw ResourceNotFoundException();
 				}
 			}
 		}
 	}
-	catch (const std::runtime_error&)
+	catch (const ResourceNotFoundException& e)
 	{
-		sendErrorResponse(RESOURCE_NOT_FOUND, "Not Found",
+		sendErrorResponse(RESOURCE_NOT_FOUND, e.what(),
 			server->getErrorPage(RESOURCE_NOT_FOUND),
 				std::vector<std::string>());
-		return ;
+	}
+	catch (const MethodNotAllowedException& e)
+	{
+		sendErrorResponse(METHOD_NOT_ALLOWED, e.what(),
+			server->getErrorPage(METHOD_NOT_ALLOWED),
+				std::vector<std::string>());
+	}
+	catch (const InternalServerErrorException& e)
+	{
+		sendErrorResponse(INTERNAL_SERVER_ERROR, e.what(),
+			server->getErrorPage(INTERNAL_SERVER_ERROR),
+				std::vector<std::string>());
+	}
+	catch (const BadRequestException& e)
+	{
+		sendErrorResponse(BAD_REQUEST, e.what(),
+			server->getErrorPage(BAD_REQUEST),
+				std::vector<std::string>());
+	}
+	catch (const PayloadTooLargeException& e)
+	{
+		sendErrorResponse(PAYLOAD_TOO_LARGE, e.what(),
+			server->getErrorPage(PAYLOAD_TOO_LARGE),
+				std::vector<std::string>());
+	}
+	catch (const ConflictException& e)
+	{
+		sendErrorResponse(CONFLICT, e.what(),
+			server->getErrorPage(CONFLICT),
+				std::vector<std::string>());
+	}
+	catch (const RequestTimeoutException& e)
+	{
+		sendErrorResponse(REQUEST_TIMEOUT, e.what(),
+			server->getErrorPage(REQUEST_TIMEOUT),
+				std::vector<std::string>());
+	}
+	catch (const UnauthorizedException& e)
+	{
+		sendErrorResponse(UNAUTHORIZED, e.what(),
+			server->getErrorPage(UNAUTHORIZED),
+				std::vector<std::string>());
+	}
+	catch (const std::exception& e)
+	{
+		sendErrorResponse(INTERNAL_SERVER_ERROR, e.what(),
+			server->getErrorPage(INTERNAL_SERVER_ERROR),
+				std::vector<std::string>());
 	}
 }
 
@@ -517,11 +546,6 @@ void	ClientConnection::run_cgi_script(Epoll& epoll)
 
 void	ClientConnection::handleLogin()
 {
-	return server->authenticateUser(request.getUsername(), request.getPassword());
-}
-
-void	ClientConnection::handleRegistration()
-{
 	const std::string	USERNAME_FIELD = "username=";
 	const std::string	PASSWORD_FIELD = "&password=";
 	
@@ -530,13 +554,65 @@ void	ClientConnection::handleRegistration()
 	std::size_t	password_pos = request.body.find(PASSWORD_FIELD);
 	if (username_pos == std::string::npos || password_pos == std::string::npos)
 	{
-		sendErrorResponse(BAD_REQUEST, "Bad Request",
-			server->getErrorPage(BAD_REQUEST),
-			std::vector<std::string>());
-		return;
+		throw BadRequestException();
 	}
 	std::string username = request.body.substr(username_pos + USERNAME_FIELD.size(),
 	password_pos - (username_pos + USERNAME_FIELD.size()));
 	std::string password = request.body.substr(password_pos + PASSWORD_FIELD.size());
-	server->registerUser(username, password);
+	if (!server->authenticateUser(username, password))
+	{
+		throw UnauthorizedException();
+	}
+	const std::string& session_id = generateSessionId(32); // Generate a 32-byte (64 hex characters) session ID
+	server->addSessionId(session_id);
+	response.addHeader("Set-Cookie", "session_id=" + session_id + "; HttpOnly; Path=/");
+}
+
+void	ClientConnection::handleRegistration()
+{
+	const std::string	USERNAME_FIELD = "username=";
+	const std::string	PASSWORD_FIELD = "&password=";
+	const std::string	CONFIRM_PASSWORD_FIELD = "&confirm=";
+	
+	// Parse username and password from request body
+	std::size_t	username_pos = request.body.find(USERNAME_FIELD);
+	std::size_t	password_pos = request.body.find(PASSWORD_FIELD);
+	std::size_t	confirm_password_pos = request.body.find(CONFIRM_PASSWORD_FIELD);
+	if (username_pos == std::string::npos
+		|| password_pos == std::string::npos
+		|| confirm_password_pos == std::string::npos)
+	{
+		throw BadRequestException();
+	}
+	std::string username = request.body.substr(username_pos + USERNAME_FIELD.size(),
+	password_pos - (username_pos + USERNAME_FIELD.size()));
+	std::string password = request.body.substr(password_pos + PASSWORD_FIELD.size(),
+		confirm_password_pos - (password_pos + PASSWORD_FIELD.size()));
+	server->addUser(username, password);
+}
+
+// Generate a cryptographically secure random session ID
+std::string ClientConnection::generateSessionId(std::size_t length_bytes) {
+	static const std::size_t MAX_LENGTH = 64; // Maximum length in bytes
+    std::vector<char> buffer(MAX_LENGTH);  // up to 64 random bytes
+    length_bytes = std::min(length_bytes, buffer.size());
+
+    // Read from /dev/urandom
+    std::ifstream urandom("/dev/urandom", std::ios::in | std::ios::binary);
+    if (!urandom) {
+        throw std::ios_base::failure("Failed to open /dev/urandom");
+    }
+    urandom.read(buffer.data(), static_cast<std::streamsize>(length_bytes));
+    if (!urandom) {
+        throw std::ios_base::failure("Failed to read from /dev/urandom");
+    }
+
+    // Convert to hex string
+    std::ostringstream oss;
+    for (std::size_t i = 0; i < length_bytes; ++i) {
+        oss << std::hex << std::setw(2) << std::setfill('0')
+		<< static_cast<unsigned int>(static_cast<unsigned char>(buffer[i]));
+    }
+
+    return oss.str();  // e.g. "9f2a7b13d4c8e6..."
 }

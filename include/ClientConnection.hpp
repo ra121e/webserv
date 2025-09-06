@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/04 20:45:02 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/06 19:31:06 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,9 +77,11 @@ class ClientConnection : public BaseFile, public BaseExpiration
 			MOVED_PERMANENTLY = 301,
 			MOVED_TEMPORARILY = 302,
 			BAD_REQUEST = 400,
+			UNAUTHORIZED = 401,
 			RESOURCE_NOT_FOUND = 404,
 			METHOD_NOT_ALLOWED = 405,
 			REQUEST_TIMEOUT = 408,
+			CONFLICT = 409,
 			CONTENT_LENGTH_MISSING = 411,
 			PAYLOAD_TOO_LARGE = 413,
 			INTERNAL_SERVER_ERROR = 500
@@ -95,6 +97,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		static std::string	getFileExtension(const std::string& filepath);
 		void		handleLogin();
 		void		handleRegistration();
+		static std::string	generateSessionId(std::size_t length);
 };
 
 

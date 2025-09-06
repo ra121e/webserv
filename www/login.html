@@ -35,11 +35,10 @@
   <div class="page">
     <div class="card">
       <h2>Login</h2>
-      <p class="muted">Demo login form. Integrate with your authentication backend to validate credentials.</p>
-      <form id="loginForm" method="post" action="/login">
+      <form id="loginForm" method="post" action="/login" encltype="application/x-www-form-urlencoded">
         <div class="field">
-          <label for="user">Username or Email</label>
-          <input id="user" name="user" required />
+          <label for="username">Username</label>
+          <input id="username" name="username" required />
         </div>
         <div class="field">
           <label for="password">Password</label>
@@ -59,7 +58,7 @@ const loginForm = document.getElementById('loginForm');
 loginForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const status = document.getElementById('login-status');
-  const data = new FormData(loginForm);
+  const data = new URLSearchParams(new FormData(loginForm));
   try {
     const res = await fetch('/login', { method:'POST', body:data });
     if (res.ok){

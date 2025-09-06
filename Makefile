@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/09/03 19:10:24 by cgoh             ###   ########.fr        #
+#    Updated: 2025/09/06 21:47:19 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,8 @@ NAME_S	=	webserv
 SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp\
             Epoll.cpp ClientConnection.cpp BaseExpiration.cpp\
             HttpRequest.cpp HttpResponse.cpp TmpDirCleaner.cpp BaseFile.cpp\
-            Timer.cpp ConnectionExpiration.cpp CGI.cpp Pipe.cpp
+            Timer.cpp ConnectionExpiration.cpp CGI.cpp Pipe.cpp User.cpp\
+			Exceptions.cpp
 
 SRC_DIR	=	src
 SRC_S	=	$(patsubst %.cpp,$(SRC_DIR)/%.cpp,$(SRC_F_S))
@@ -31,9 +32,9 @@ LDLIBS  =   -lbsd
 
 # Compiler flags for clang++
 
-CXXFLAGS    =   -std=c++98 -Wall -Wextra -Werror -Weverything -MMD -MP -ggdb3\
-                -Wno-suggest-destructor-override -Wno-padded -Wno-weak-vtables\
-                -Wno-missing-noreturn
+CXXFLAGS    =   -std=c++98 -Wall -Wextra -Werror -Weverything -MMD -MP -g3\
+                -fstandalone-debug -Wno-suggest-destructor-override -Wno-padded\
+				-Wno-weak-vtables -Wno-missing-noreturn -Wno-suggest-override
 
 # Compiler flags for g++
 
@@ -63,6 +64,7 @@ CXXFLAGS    =   -std=c++98 -Wall -Wextra -Werror -Weverything -MMD -MP -ggdb3\
 #     -Wundef \
 #     -Wunused-macros \
 #     -Wuseless-cast \
+# 	-Wno-suggest-override
 
 CXX		=	c++
 
