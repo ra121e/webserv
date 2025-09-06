@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
+#include <map>
 #include <netdb.h>
 #include <stdexcept>
 #include <string>
@@ -12,16 +13,9 @@
 #include <vector>
 #include <fcntl.h>
 #include <algorithm>
-#include "../include/Exceptions.hpp"
 
 Server::Server() : client_max_body_size()
 {
-	Location cgiLoc;
-	cgiLoc.setAlias("cgi-bin/"); // actual disk path to CGI scripts
-	cgiLoc.addMethod("GET");
-	cgiLoc.addMethod("POST");
-	cgiLoc.addMethod("DELETE");
-	locations["/cgi-bin/"] = cgiLoc;
 }
 
 Server::Server(const Server& other): client_max_body_size(other.client_max_body_size), error_pages(other.error_pages), locations(other.locations)
@@ -197,7 +191,7 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
-const Location&	Server::getLocation(std::string const &uri, const std::string& extension, HttpRequest& request) const
+std::map<std::string, Location>::const_iterator	Server::getLocationIteratorMatch(std::string const &uri, const std::string& extension, HttpRequest& request) const
 {
 	std::string clean_uri = uri;
 	size_t pos = clean_uri.find('?');
@@ -209,22 +203,22 @@ const Location&	Server::getLocation(std::string const &uri, const std::string& e
 		if (!extension.empty() && it->second.supports_cgi_extension(extension))
 		{
 			request.forward_to_cgi = true;
-			return it->second;
+			return it;
 		}
 		if (path[path.size() - 1] == '/' && path != "/")
 		{
 			size_t	final_slash_pos = clean_uri.rfind("/");
 			if (path == clean_uri.substr(0, final_slash_pos + 1))
 			{
-				return it->second;
+				return it;
 			}
 		}
 		else if (path == clean_uri)
 		{
-			return it->second;
+			return it;
 		}
 	}
-	throw ResourceNotFoundException();
+	return locations.end();
 }
 
 const std::map<std::string, Location> &Server::getLocations() const
@@ -245,17 +239,17 @@ const std::vector<Network*>&	Server::getNetworks() const
 	return networks;
 }
 
-const std::string& Server::getErrorPage(int code) const
+std::string Server::getErrorPage(int code) const
 {
 	std::ostringstream oss;
 	oss << code;
 	std::string codeStr = oss.str();
 	std::map<std::string, std::string>::const_iterator it = error_pages.find(codeStr);
-	if (it == error_pages.end())
+	if (it != error_pages.end())
 	{
-		throw InternalServerErrorException();
+		return it->second;
 	}
-	return it->second;
+	return "";
 }
 
 uint64_t Server::getClientMaxBodySize() const
@@ -263,16 +257,17 @@ uint64_t Server::getClientMaxBodySize() const
 	return client_max_body_size;
 }
 
-void	Server::addUser(const std::string& username, const std::string& password)
+bool	Server::addUser(const std::string& username, const std::string& password)
 {
 	for (std::vector<User>::const_iterator it = users.begin(); it != users.end(); ++it)
 	{
 		if (it->getUsername() == username)
 		{
-			throw ConflictException();
+			return false;
 		}
 	}
 	users.push_back(User(username, password));
+	return true;
 }
 
 void	Server::addSessionId(const std::string& session_id)

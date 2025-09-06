@@ -36,13 +36,13 @@ public:
 	void	setClientMaxBodySize(uint64_t _client_max_body_size);
 	void	addErrorPage(const std::string& error, const std::string& page);
 	void	addLocation(const std::string& path, const Location& location);
-	const Location&	getLocation(std::string const &uri, const std::string& extension, HttpRequest& request) const;
+	std::map<std::string, Location>::const_iterator getLocationIteratorMatch(std::string const &uri, const std::string& extension, HttpRequest& request) const;
 	const std::map<std::string, Location> &getLocations() const;
 	void	setup();
 	const std::vector<Network*>&	getNetworks() const;
-	const std::string& getErrorPage(int code) const;
+	std::string getErrorPage(int code) const;
 	uint64_t getClientMaxBodySize() const;
-	void	addUser(const std::string& username, const std::string& password);
+	bool	addUser(const std::string& username, const std::string& password);
 	bool	authenticateUser(const std::string& username, const std::string& password) const;
 	void	addSessionId(const std::string& session_id);
 	bool	isValidSessionId(const std::string& session_id) const;

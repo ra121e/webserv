@@ -18,6 +18,7 @@
 # include "Server.hpp"
 #include <cstddef>
 #include <ctime>
+#include <map>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string>
@@ -78,6 +79,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 			MOVED_TEMPORARILY = 302,
 			BAD_REQUEST = 400,
 			UNAUTHORIZED = 401,
+			FORBIDDEN = 403,
 			RESOURCE_NOT_FOUND = 404,
 			METHOD_NOT_ALLOWED = 405,
 			REQUEST_TIMEOUT = 408,
@@ -88,15 +90,16 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		};
 		static const std::size_t	MAX_HEADER_SIZE = 8192;
 
-		static std::string	readFileContent(const std::string &path);
+		static std::string	readFileContent(StatusCode status_code,
+			const std::string& status_text,
+			const std::string &path);
 		void		sendErrorResponse(StatusCode status_code,
-                                        const std::string &status_text,
-                                        const std::string &error_file,
-                                        const std::vector<std::string> &allow_methods);
+                        const std::string &status_text,
+                        const std::string& error_file);
 		static std::string	makeIndexof(std::string const &path_dir, std::string const &uri);
 		static std::string	getFileExtension(const std::string& filepath);
-		void		handleLogin();
-		void		handleRegistration();
+		StatusCode		handleLogin();
+		StatusCode		handleRegistration();
 		static std::string	generateSessionId(std::size_t length);
 };
 

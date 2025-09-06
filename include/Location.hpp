@@ -36,7 +36,7 @@ class Location
 	bool	isAutoindexOn() const;
 	const std::string	&getAlias() const;
 	const std::string	&getIndex() const;
-	const std::vector<std::string>& getMethods() const;
+	std::string	getMethodsStrRep() const;
 	bool	getIsRedirect() const;
 	const std::string&	getRedirectTarget() const;
 	int	getRedirectCode() const;

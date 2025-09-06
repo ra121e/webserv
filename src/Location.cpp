@@ -177,9 +177,16 @@ const std::string	&Location::getIndex() const
 	return (index);
 }
 
-const std::vector<std::string>& Location::getMethods() const
+std::string	Location::getMethodsStrRep() const
 {
-	return methods;
+	std::string methodsStr;
+	for (std::size_t i = 0; i < methods.size(); ++i)
+	{
+		methodsStr += methods[i];
+		if (i + 1 < methods.size())
+			methodsStr += ", ";
+	}
+	return methodsStr;
 }
 
 bool	Location::getIsRedirect() const

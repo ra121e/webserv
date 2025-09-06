@@ -18,6 +18,7 @@
 #include <cstring>
 #include <ctime>
 #include <ios>
+#include <map>
 #include <netdb.h>
 #include <stdexcept>
 #include <string>
@@ -31,7 +32,6 @@
 #include <sys/stat.h>
 #include "../include/CGI.hpp"
 #include "../include/Epoll.hpp"
-#include "../include/Exceptions.hpp"
 #include <iomanip>
 #include <vector>
 
@@ -228,23 +228,27 @@ bool	ClientConnection::parseRequest()
 	return true;
 }
 
-std::string	ClientConnection::readFileContent(const std::string &path)
+std::string	ClientConnection::readFileContent(StatusCode status_code,
+	const std::string& status_text, const std::string &path)
 {
 	std::ifstream file(path.c_str());
+	std::stringstream	ss;
 	if (!file)
-		return "<h1>Could not open " + path + "</h1>";
-	std::stringstream ss;
+	{
+		ss << "<html><head><title>" << status_code << " " << status_text << "</title></head>";
+		// Add a body with the error message
+		ss << "<body><h1>" << status_code << " " << status_text << "</h1></body></html>";
+		return ss.str();
+	}
 	ss << file.rdbuf();
 	return ss.str();
 }
 
 void	ClientConnection::sendErrorResponse(StatusCode status_code,
-					const std::string &status_text,
-					const std::string &error_file,
-					const std::vector<std::string> &allow_methods)
+	const std::string &status_text,const std::string& error_file)
 {
 	// Load HTML content from disk
-	const std::string& content = readFileContent(error_file);
+	const std::string& content = readFileContent(status_code, status_text, error_file);
 
 	// Set HTTP status
 	response.status_code = status_code;
@@ -253,20 +257,6 @@ void	ClientConnection::sendErrorResponse(StatusCode status_code,
 	// Body and content type
 	response.setBody(content, "text/html");
 
-	// Optionally add Allow header (for METHOD_NOT_ALLOWED Method Not Allowed)
-	if (!allow_methods.empty())
-	{
-		std::string allow;
-		std::vector<std::string>::const_iterator it = allow_methods.begin();
-		while (it != allow_methods.end())
-		{
-			allow += *it;
-			++it;
-			if (it != allow_methods.end())
-				allow += ", ";
-		}
-		response.addHeader("Allow", allow);
-	}
 	// Finalize response into the buffer that will be written to the socket
 	res_buffer = response.makeString();
 }
@@ -293,171 +283,183 @@ std::string	ClientConnection::makeIndexof(std::string const &path_dir, std::stri
 
 void	ClientConnection::makeResponse(Epoll& epoll)
 {
-	try
+	if (request.is_bad)
 	{
-		if (request.is_bad)
+		sendErrorResponse(BAD_REQUEST,
+			"Bad Request",
+			server->getErrorPage(BAD_REQUEST));
+		return;
+	}
+	if (server_error)
+	{
+		sendErrorResponse(INTERNAL_SERVER_ERROR,
+			"Internal Server Error",
+			server->getErrorPage(INTERNAL_SERVER_ERROR));
+		return;
+	}
+	if (timed_out)
+	{
+		sendErrorResponse(REQUEST_TIMEOUT,
+			"Request Timeout",
+			server->getErrorPage(REQUEST_TIMEOUT));
+		return;
+	}
+	if (request.body_too_large)
+	{
+		sendErrorResponse(PAYLOAD_TOO_LARGE,
+			"Payload Too Large",
+			server->getErrorPage(PAYLOAD_TOO_LARGE));
+		return;
+	}
+
+	std::map<std::string, Location>::const_iterator loc_it =
+	server->getLocationIteratorMatch(request.uri, request.extension, request);
+
+	if (loc_it == server->getLocations().end())
+	{
+		sendErrorResponse(RESOURCE_NOT_FOUND,
+			"Resource Not Found",
+			server->getErrorPage(RESOURCE_NOT_FOUND));
+		return;
+	}
+
+	const Location&	loc = loc_it->second;
+
+	if (loc.getIsRedirect())
+	{
+		response.addHeader("Location", loc.getRedirectTarget());
+		sendErrorResponse(static_cast<StatusCode>(loc.getRedirectCode()),
+		"Redirecting",
+		server->getErrorPage(loc.getRedirectCode()));
+		return;
+	}
+	if (!loc.isMethod(request.method))
+	{
+		response.addHeader("Allow", loc.getMethodsStrRep());
+		sendErrorResponse(METHOD_NOT_ALLOWED,
+			"Method Not Allowed",
+			server->getErrorPage(METHOD_NOT_ALLOWED));
+		return;
+	}
+	if (request.forward_to_cgi)
+	{
+		run_cgi_script(epoll);
+		return;
+	}
+	if (request.method == POST)
+	{
+		if (request.uri == "/login")
 		{
-			throw BadRequestException();
+			StatusCode code = handleLogin();
+			if (code != OK)
+			{
+				sendErrorResponse(code,
+					code == UNAUTHORIZED ? "Unauthorized" : "Bad Request",
+					server->getErrorPage(code));
+			}
 		}
-		if (server_error)
+		else if (request.uri == "/register")
 		{
-			throw InternalServerErrorException();
+			StatusCode code = handleRegistration();
+			if (code != OK)
+			{
+				sendErrorResponse(code,
+					code == CONFLICT ? "Conflict" : "Bad Request",
+					server->getErrorPage(code));
+			}
 		}
-		if (timed_out)
+	}
+	else if (request.method == DELETE)
+	{
+		size_t	final_slash_pos = request.uri.rfind('/');
+		const std::string& filename = request.uri.substr(final_slash_pos + 1);
+
+		if (unlink(("tmp/" + filename).c_str()) == -1)
 		{
-			throw RequestTimeoutException();
-		}
-		if (request.body_too_large)
-		{
-			throw PayloadTooLargeException();
-		}
-		const Location&	loc = server->getLocation(request.uri, request.extension, request);
-		if (loc.getIsRedirect())
-		{
-			response.addHeader("Location", loc.getRedirectTarget());
-			sendErrorResponse(static_cast<StatusCode>(loc.getRedirectCode()),
-			"Redirecting",
-			server->getErrorPage(loc.getRedirectCode()),
-			std::vector<std::string>());
-			return ;
-		}
-		if (!loc.isMethod(request.method))
-		{
-			throw MethodNotAllowedException();
-		}
-		if (request.forward_to_cgi)
-		{
-			run_cgi_script(epoll);
+			StatusCode	status_code = errno == ENOENT ? RESOURCE_NOT_FOUND : INTERNAL_SERVER_ERROR;
+			sendErrorResponse(status_code,
+				"Error deleting file",
+				server->getErrorPage(status_code));
 			return;
 		}
-		if (request.method == POST)
-		{
-			if (request.uri == "/login")
-			{
-				handleLogin();
-			}
-			else if (request.uri == "/register")
-			{
-				handleRegistration();
-			}
+	}
+	const std::string& filepath = loc.getAlias() + loc.getIndex();
+
+	struct stat file_stat = {};
+	if (stat(filepath.c_str(), &file_stat) != 0)
+	{
+		switch (errno) {
+			case ENOENT:
+				sendErrorResponse(RESOURCE_NOT_FOUND,
+					"Not Found",
+					server->getErrorPage(RESOURCE_NOT_FOUND));
+				break;
+			case EACCES:
+				sendErrorResponse(FORBIDDEN,
+					"Forbidden",
+					server->getErrorPage(FORBIDDEN));
+				break;
+			default:
+				sendErrorResponse(INTERNAL_SERVER_ERROR,
+				"Error retrieving file information",
+				server->getErrorPage(INTERNAL_SERVER_ERROR));
+				break;
 		}
-		else if (request.method == DELETE)
+		return;
+	}
+	if (S_ISREG(file_stat.st_mode))
+	{
+		std::ifstream	file(filepath.c_str(), std::ios::binary);
+		if (!file)
 		{
-			size_t	final_slash_pos = request.uri.rfind('/');
-			const std::string& filename = request.uri.substr(final_slash_pos + 1);
-
-			if (unlink(("tmp/" + filename).c_str()) == -1)
-			{
-				if (errno == ENOENT)
-				{
-					throw ResourceNotFoundException();
-				}
-				throw InternalServerErrorException();
-			}
+			sendErrorResponse(INTERNAL_SERVER_ERROR,
+				"Error opening file",
+				server->getErrorPage(INTERNAL_SERVER_ERROR));
+			return;
 		}
-		const std::string& filepath = loc.getAlias() + loc.getIndex();
 
-		struct stat file_stat = {};
-		if (stat(filepath.c_str(), &file_stat) == 0)
+		std::stringstream	ss;
+		ss << file.rdbuf();
+		response.status_code = OK;
+		response.status_message = "OK";
+		const std::string& extension = getFileExtension(filepath);
+		std::string content_type = "application/octet-stream";
+		if (extension == "html")
 		{
-			if (S_ISREG(file_stat.st_mode))
-			{
-				std::ifstream	file(filepath.c_str(), std::ios::binary);
-				if (!file)
-				{
-					throw ResourceNotFoundException();
-				}
-
-				std::stringstream	ss;
-				ss << file.rdbuf();
-				response.status_code = OK;
-				response.status_message = "OK";
-				const std::string& extension = getFileExtension(filepath);
-				std::string content_type = "application/octet-stream";
-				if (extension == "html")
-				{
-					content_type = "text/html";
-				}
-				else if (extension == "css")
-				{
-					content_type = "text/css";
-				}
-				else if (extension == "js")
-				{
-					content_type = "application/javascript";
-				}
-				response.setBody(ss.str(), content_type);
-				res_buffer = response.makeString();
-			}
-			else if (S_ISDIR(file_stat.st_mode))
-			{
-				if (loc.isAutoindexOn())
-				{
-					response.status_code = OK;
-					response.status_message = "OK";
-					response.setBody(makeIndexof(filepath, request.uri), "text/html");
-					res_buffer = response.makeString();
-				}
-				else
-				{
-					throw ResourceNotFoundException();
-				}
-			}
+			content_type = "text/html";
+		}
+		else if (extension == "css")
+		{
+			content_type = "text/css";
+		}
+		else if (extension == "js")
+		{
+			content_type = "application/javascript";
+		}
+		response.setBody(ss.str(), content_type);
+		res_buffer = response.makeString();
+	}
+	else if (S_ISDIR(file_stat.st_mode))
+	{
+		if (loc.isAutoindexOn())
+		{
+			response.status_code = OK;
+			response.status_message = "OK";
+			response.setBody(makeIndexof(filepath, request.uri), "text/html");
+			res_buffer = response.makeString();
+		}
+		else
+		{
+			sendErrorResponse(FORBIDDEN,
+				"Forbidden",
+				server->getErrorPage(FORBIDDEN));
 		}
 	}
-	catch (const ResourceNotFoundException& e)
+	else
 	{
-		sendErrorResponse(RESOURCE_NOT_FOUND, e.what(),
-			server->getErrorPage(RESOURCE_NOT_FOUND),
-				std::vector<std::string>());
-	}
-	catch (const MethodNotAllowedException& e)
-	{
-		sendErrorResponse(METHOD_NOT_ALLOWED, e.what(),
-			server->getErrorPage(METHOD_NOT_ALLOWED),
-				std::vector<std::string>());
-	}
-	catch (const InternalServerErrorException& e)
-	{
-		sendErrorResponse(INTERNAL_SERVER_ERROR, e.what(),
-			server->getErrorPage(INTERNAL_SERVER_ERROR),
-				std::vector<std::string>());
-	}
-	catch (const BadRequestException& e)
-	{
-		sendErrorResponse(BAD_REQUEST, e.what(),
-			server->getErrorPage(BAD_REQUEST),
-				std::vector<std::string>());
-	}
-	catch (const PayloadTooLargeException& e)
-	{
-		sendErrorResponse(PAYLOAD_TOO_LARGE, e.what(),
-			server->getErrorPage(PAYLOAD_TOO_LARGE),
-				std::vector<std::string>());
-	}
-	catch (const ConflictException& e)
-	{
-		sendErrorResponse(CONFLICT, e.what(),
-			server->getErrorPage(CONFLICT),
-				std::vector<std::string>());
-	}
-	catch (const RequestTimeoutException& e)
-	{
-		sendErrorResponse(REQUEST_TIMEOUT, e.what(),
-			server->getErrorPage(REQUEST_TIMEOUT),
-				std::vector<std::string>());
-	}
-	catch (const UnauthorizedException& e)
-	{
-		sendErrorResponse(UNAUTHORIZED, e.what(),
-			server->getErrorPage(UNAUTHORIZED),
-				std::vector<std::string>());
-	}
-	catch (const std::exception& e)
-	{
-		sendErrorResponse(INTERNAL_SERVER_ERROR, e.what(),
-			server->getErrorPage(INTERNAL_SERVER_ERROR),
-				std::vector<std::string>());
+		sendErrorResponse(FORBIDDEN,
+			"Forbidden",
+			server->getErrorPage(FORBIDDEN));
 	}
 }
 
@@ -544,7 +546,7 @@ void	ClientConnection::run_cgi_script(Epoll& epoll)
 	}
 }
 
-void	ClientConnection::handleLogin()
+ClientConnection::StatusCode	ClientConnection::handleLogin()
 {
 	const std::string	USERNAME_FIELD = "username=";
 	const std::string	PASSWORD_FIELD = "&password=";
@@ -554,21 +556,22 @@ void	ClientConnection::handleLogin()
 	std::size_t	password_pos = request.body.find(PASSWORD_FIELD);
 	if (username_pos == std::string::npos || password_pos == std::string::npos)
 	{
-		throw BadRequestException();
+		return BAD_REQUEST;
 	}
 	std::string username = request.body.substr(username_pos + USERNAME_FIELD.size(),
 	password_pos - (username_pos + USERNAME_FIELD.size()));
 	std::string password = request.body.substr(password_pos + PASSWORD_FIELD.size());
 	if (!server->authenticateUser(username, password))
 	{
-		throw UnauthorizedException();
+		return UNAUTHORIZED;
 	}
 	const std::string& session_id = generateSessionId(32); // Generate a 32-byte (64 hex characters) session ID
 	server->addSessionId(session_id);
 	response.addHeader("Set-Cookie", "session_id=" + session_id + "; HttpOnly; Path=/");
+	return OK;
 }
 
-void	ClientConnection::handleRegistration()
+ClientConnection::StatusCode	ClientConnection::handleRegistration()
 {
 	const std::string	USERNAME_FIELD = "username=";
 	const std::string	PASSWORD_FIELD = "&password=";
@@ -582,13 +585,17 @@ void	ClientConnection::handleRegistration()
 		|| password_pos == std::string::npos
 		|| confirm_password_pos == std::string::npos)
 	{
-		throw BadRequestException();
+		return  BAD_REQUEST;
 	}
 	std::string username = request.body.substr(username_pos + USERNAME_FIELD.size(),
 	password_pos - (username_pos + USERNAME_FIELD.size()));
 	std::string password = request.body.substr(password_pos + PASSWORD_FIELD.size(),
 		confirm_password_pos - (password_pos + PASSWORD_FIELD.size()));
-	server->addUser(username, password);
+	if (!server->addUser(username, password))
+	{
+		return CONFLICT;
+	}
+	return OK;
 }
 
 // Generate a cryptographically secure random session ID
