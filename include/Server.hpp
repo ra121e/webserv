@@ -46,6 +46,7 @@ public:
 	bool	authenticateUser(const std::string& username, const std::string& password) const;
 	void	addSessionId(const std::string& session_id);
 	bool	isValidSessionId(const std::string& session_id) const;
+	void	removeSessionId(const std::string& session_id);
 };
 
 #endif

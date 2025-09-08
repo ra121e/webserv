@@ -64,6 +64,9 @@
         <a href="/upload">Upload/Delete</a>
         <a href="/uploads">Uploads</a>
         <a href="/redirect">Redirection</a>
+    <a href="/register" id="nav-register">Register</a>
+    <a href="/login" id="nav-login">Login</a>
+    <a href="/logout" id="nav-logout" style="display:none">Logout</a>
     </div>
     <div class="container">
         <h1>401</h1>
@@ -72,4 +75,15 @@
         <a class="button" href="/">Go Back Home</a>
     </div>
 </body>
+<script>
+(function(){
+    function getCookie(n){ const m=document.cookie.match(new RegExp('(?:^|; )'+n.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1')+'=([^;]*)')); return m?decodeURIComponent(m[1]):null; }
+    var authed=getCookie('session_id');
+    var reg=document.getElementById('nav-register');
+    var login=document.getElementById('nav-login');
+    var logout=document.getElementById('nav-logout');
+    if (authed){ if(reg) reg.style.display='none'; if(login) login.style.display='none'; if(logout) logout.style.display='inline-block'; }
+    else { if(logout) logout.style.display='none'; }
+})();
+</script>
 </html>

@@ -16,8 +16,10 @@
                 <a href="/upload">Upload/Delete</a>
                 <a href="/uploads">Uploads</a>
                 <a href="/redirect">Redirection</a>
-                <a href="/register">Register</a>
-                <a href="/login">Login</a>
+                <a href="/register" id="nav-register">Register</a>
+                <a href="/login" id="nav-login">Login</a>
+                <a href="/logout" id="nav-logout" style="display:none">Logout</a>
+                <a href="/lounge">Lounge</a>
         </nav>
     </div>
 </header>
@@ -33,5 +35,19 @@
 <footer>
     <p>&copy; 2025 My Web Server Project</p>
 </footer>
+<script>
+(function(){
+    function getCookie(n){
+        const m=document.cookie.match(new RegExp('(?:^|; )'+n.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1')+'=([^;]*)'));return m?decodeURIComponent(m[1]):null;
+    }
+    function clearCookie(n){ document.cookie=n+'=; Max-Age=0; Path=/; SameSite=Lax'; }
+    var authed=getCookie('session_id');
+    var reg=document.getElementById('nav-register');
+    var login=document.getElementById('nav-login');
+    var logout=document.getElementById('nav-logout');
+    if (authed){ if(reg) reg.style.display='none'; if(login) login.style.display='none'; if(logout) logout.style.display='inline-block'; }
+    else { if(logout) logout.style.display='none'; }
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Members Lounge</title>
+  <link rel="stylesheet" href="/style">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    .pill { display:inline-block; padding:4px 10px; border-radius:999px; font-size:12px; border:1px solid rgba(148,163,184,.35); color:var(--muted); }
+    .locked { color:#f59e0b; font-weight:700; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="container header-inner">
+    <div class="brand"><span class="logo"></span>Members Lounge</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/status">Status</a>
+      <a href="/upload">Upload/Delete</a>
+      <a href="/uploads">Uploads</a>
+      <a href="/redirect">Redirection</a>
+  <a href="/register" id="nav-register">Register</a>
+  <a href="/login" id="nav-login">Login</a>
+  <a href="/logout" id="nav-logout" style="display:none">Logout</a>
+      <a href="/lounge">Lounge</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="page">
+    <div class="card">
+      <div class="pill">Members-only</div>
+      <h2>Welcome to the Lounge</h2>
+  <p class="muted">This area is reserved for signed-in users.</p>
+  <div id="gate"></div>
+    </div>
+  </div>
+</main>
+<footer>
+  <p>&copy; 2025 My Web Server Project</p>
+</footer>
+<script>
+function getCookie(name){
+  const m=document.cookie.match(new RegExp('(?:^|; )'+name.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1')+'=([^;]*)'));
+  return m?decodeURIComponent(m[1]):null;
+}
+const gate=document.getElementById('gate');
+const isAuthed=getCookie('session_id');
+if (isAuthed){
+  gate.innerHTML='<p>🎉 You\'re in. Enjoy your stay!</p>';
+} else {
+  gate.innerHTML='<p class="locked">🔒 Access restricted. Please <a href="/login">log in</a> to enter the lounge.</p>';
+}
+(function(){
+  function clearCookie(n){ document.cookie=n+'=; Max-Age=0; Path=/; SameSite=Lax'; }
+  var reg=document.getElementById('nav-register');
+  var login=document.getElementById('nav-login');
+  var logout=document.getElementById('nav-logout');
+  if (isAuthed){ if(reg) reg.style.display='none'; if(login) login.style.display='none'; if(logout) logout.style.display='inline-block'; }
+  else { if(logout) logout.style.display='none'; }
+})();
+</script>
+</body>
+</html>

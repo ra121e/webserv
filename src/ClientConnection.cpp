@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/06 21:15:45 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/08 21:10:03 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -153,6 +153,9 @@ void	ClientConnection::appendToResBuffer(char const *data, size_t size)
 
 bool	ClientConnection::parseRequest()
 {
+	const std::string	DOUBLE_CRLF = "\r\n\r\n";
+	const std::string	CRLF = "\r\n";
+	
 	if (!request.is_header_parse)
 	{
 		if (buffer.size() > MAX_HEADER_SIZE)
@@ -160,14 +163,14 @@ bool	ClientConnection::parseRequest()
 			request.is_bad = true;
 			return true; // Bad request, too large header
 		}
-		request.header_end_pos	= buffer.find("\r\n\r\n");
+		request.header_end_pos	= buffer.find(DOUBLE_CRLF);
 		if (request.header_end_pos == std::string::npos)
 		{
 			return false; // Not enough data to parse the request
 		}
 
 		// start all of header part(until new line)
-		std::string	header_string = buffer.substr(0, request.header_end_pos);
+		std::string	header_string = buffer.substr(0, request.header_end_pos + CRLF.size());
 		std::stringstream	ss(header_string);
 
 		// first line
@@ -178,19 +181,19 @@ bool	ClientConnection::parseRequest()
 		}
 
 		// header main part
-		size_t	request_line_end = header_string.find("\r\n");
-		header_string = header_string.substr(request_line_end + 2);
-		for (size_t pos = header_string.find("\r\n"); pos != std::string::npos; pos = header_string.find("\r\n"))
+		size_t	request_line_end = header_string.find(CRLF);
+		header_string = header_string.substr(request_line_end + CRLF.size());
+		for (size_t pos = header_string.find(CRLF); pos != std::string::npos; pos = header_string.find(CRLF))
 		{
 			const std::string& header_line = header_string.substr(0, pos);
 			size_t	colon_pos = header_line.find(": ");
 			if (colon_pos != std::string::npos)
 			{
 				const std::string&	key = header_line.substr(0, colon_pos);
-				const std::string&	value = header_line.substr(colon_pos + 2); // skip ": "
+				const std::string&	value = header_line.substr(colon_pos + CRLF.size()); // skip ": "
 				request.headers[key] = value;
 			}
-			header_string.erase(0, pos + 2); // skip "\r\n"
+			header_string.erase(0, pos + CRLF.size()); // skip "\r\n"
 		}
 		request.is_header_parse = true;
 	}
@@ -203,7 +206,7 @@ bool	ClientConnection::parseRequest()
 		}
 
 		// body part
-		buffer.erase(0, request.header_end_pos + 4); // Remove header part from buffer
+		buffer.erase(0, request.header_end_pos + DOUBLE_CRLF.size()); // Remove header part from buffer
 		std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
 		if (it == request.headers.end())
 		{
@@ -327,6 +330,12 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 
 	if (loc.getIsRedirect())
 	{
+		if (request.uri == "/logout") {
+			// Clear the session cookie by setting it to expire in the past
+			response.addHeader("Set-Cookie",
+				"session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax");
+			server->removeSessionId(request.getCookieValue("session_id"));
+		}
 		response.addHeader("Location", loc.getRedirectTarget());
 		sendErrorResponse(static_cast<StatusCode>(loc.getRedirectCode()),
 		"Redirecting",
@@ -356,6 +365,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 				sendErrorResponse(code,
 					code == UNAUTHORIZED ? "Unauthorized" : "Bad Request",
 					server->getErrorPage(code));
+				return;
 			}
 		}
 		else if (request.uri == "/register")
@@ -366,6 +376,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 				sendErrorResponse(code,
 					code == CONFLICT ? "Conflict" : "Bad Request",
 					server->getErrorPage(code));
+				return;
 			}
 		}
 	}
@@ -380,6 +391,17 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 			sendErrorResponse(status_code,
 				"Error deleting file",
 				server->getErrorPage(status_code));
+			return;
+		}
+	}
+	if (request.uri == "/lounge")
+	{
+		if (!checkSessionCookie())
+		{
+			response.addHeader("Location", "/login");
+			sendErrorResponse(SEE_OTHER,
+				"Redirecting",
+				server->getErrorPage(SEE_OTHER));
 			return;
 		}
 	}
@@ -567,7 +589,7 @@ ClientConnection::StatusCode	ClientConnection::handleLogin()
 	}
 	const std::string& session_id = generateSessionId(32); // Generate a 32-byte (64 hex characters) session ID
 	server->addSessionId(session_id);
-	response.addHeader("Set-Cookie", "session_id=" + session_id + "; HttpOnly; Path=/");
+	response.addHeader("Set-Cookie", "session_id=" + session_id + "; Path=/");
 	return OK;
 }
 
@@ -622,4 +644,31 @@ std::string ClientConnection::generateSessionId(std::size_t length_bytes) {
     }
 
     return oss.str();  // e.g. "9f2a7b13d4c8e6..."
+}
+
+bool	ClientConnection::checkSessionCookie()
+{
+	std::map<std::string, std::string>::const_iterator it = request.headers.find("Cookie");
+	if (it == request.headers.end())
+	{
+		return false;
+	}
+	const std::string&	cookie_header = it->second;
+	const std::string	session_prefix = "session_id=";
+	size_t	session_pos = cookie_header.find(session_prefix);
+	if (session_pos == std::string::npos)
+	{
+		return false;
+	}
+	std::string session_id = cookie_header.substr(session_pos + session_prefix.size());
+	size_t	semicolon_pos = session_id.find(';');
+	if (semicolon_pos != std::string::npos)
+	{
+		session_id = session_id.substr(0, semicolon_pos);
+	}
+	if (!server->isValidSessionId(session_id))
+	{
+		return false;
+	}
+	return true;
 }

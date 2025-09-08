@@ -6,11 +6,12 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:46:37 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/03 19:06:56 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/08 20:23:54 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../include/HttpRequest.hpp"
+#include <string>
 
 HttpRequest::HttpRequest():
 	is_header_parse(false), waiting_for_body(false), body_too_large(false),
@@ -65,4 +66,26 @@ std::string HttpRequest::getPathInfo() const
 	if (pos != std::string::npos)
 		new_str.erase(pos);
 	return (new_str);
+}
+
+std::string	HttpRequest::getCookieValue(const std::string& cookie_name) const
+{
+	std::map<std::string, std::string>::const_iterator it = headers.find("Cookie");
+	if (it == headers.end())
+	{
+		return "";
+	}
+	const std::string&	cookie_header = it->second;
+	size_t start = cookie_header.find(cookie_name + "=");
+	if (start == std::string::npos)
+	{
+		return "";
+	}
+	start += cookie_name.length() + 1; // Move past "cookie_name="
+	size_t end = cookie_header.find(';', start);
+	if (end == std::string::npos)
+	{
+		end = cookie_header.length();
+	}
+	return cookie_header.substr(start, end - start);
 }

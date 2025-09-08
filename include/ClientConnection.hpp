@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/06 19:31:06 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/08 17:39:07 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		{
 			OK = 200,
 			MOVED_PERMANENTLY = 301,
-			MOVED_TEMPORARILY = 302,
+			SEE_OTHER = 303,
 			BAD_REQUEST = 400,
 			UNAUTHORIZED = 401,
 			FORBIDDEN = 403,
@@ -101,6 +101,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		StatusCode		handleLogin();
 		StatusCode		handleRegistration();
 		static std::string	generateSessionId(std::size_t length);
+		bool	checkSessionCookie();
 };
 
 

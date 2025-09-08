@@ -285,3 +285,14 @@ bool	Server::authenticateUser(const std::string& username, const std::string& pa
 	User userToFind(username, password);
 	return std::find(users.begin(), users.end(), userToFind) != users.end();
 }
+
+void	Server::removeSessionId(const std::string& session_id)
+{
+	std::vector<std::string>::iterator it = std::find(session_ids.begin(),
+	session_ids.end(),
+	session_id);
+	if (it != session_ids.end())
+	{
+		session_ids.erase(it);
+	}
+}

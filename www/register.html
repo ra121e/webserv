@@ -26,8 +26,9 @@
       <a href="/upload">Upload/Delete</a>
       <a href="/uploads">Uploads</a>
       <a href="/redirect">Redirection</a>
-      <a href="/register">Register</a>
-      <a href="/login">Login</a>
+    <a href="/register" id="nav-register">Register</a>
+    <a href="/login" id="nav-login">Login</a>
+    <a href="/logout" id="nav-logout" style="display:none">Logout</a>
     </nav>
   </div>
 </header>
@@ -72,10 +73,10 @@ form.addEventListener('submit', async (e)=>{
   const data = new URLSearchParams(new FormData(form));
   try {
     const res = await fetch('/register', { method:'POST', body:data });
-    if (res.ok){
-      status.textContent = '✅ Registered';
-      status.style.color = '#22c55e';
-      form.reset();
+      if (res.ok){
+        status.textContent = '✅ Registered';
+        status.style.color = '#22c55e';
+        form.reset();
     } else {
       status.textContent = '❌ Failed: ' + res.status;
       status.style.color = '#f87171';
@@ -85,6 +86,17 @@ form.addEventListener('submit', async (e)=>{
     status.style.color = '#f87171';
   }
 });
+// Toggle nav by auth cookie
+(function(){
+  function getCookie(n){ const m=document.cookie.match(new RegExp('(?:^|; )'+n.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1')+'=([^;]*)')); return m?decodeURIComponent(m[1]):null; }
+  function clearCookie(n){ document.cookie=n+'=; Max-Age=0; Path=/; SameSite=Lax'; }
+  var authed=getCookie('session_id');
+  var reg=document.getElementById('nav-register');
+  var login=document.getElementById('nav-login');
+  var logout=document.getElementById('nav-logout');
+  if (authed){ if(reg) reg.style.display='none'; if(login) login.style.display='none'; if(logout) logout.style.display='inline-block'; }
+  else { if(logout) logout.style.display='none'; }
+})();
 </script>
 </body>
 </html>

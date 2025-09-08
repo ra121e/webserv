@@ -6,7 +6,7 @@
 #    By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/09 12:48:34 by athonda           #+#    #+#              #
-#    Updated: 2025/09/06 21:47:19 by cgoh             ###   ########.fr        #
+#    Updated: 2025/09/08 17:47:04 by cgoh             ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -33,8 +33,7 @@ LDLIBS  =   -lbsd
 
 CXXFLAGS    =   -std=c++98 -Wall -Wextra -Werror -Weverything -MMD -MP -g3\
                 -fstandalone-debug -Wno-suggest-destructor-override -Wno-padded\
-				-Wno-weak-vtables -Wno-missing-noreturn -Wno-suggest-override\
-				-Wno-unsafe-buffer-usage
+				-Wno-weak-vtables -Wno-missing-noreturn -Wno-suggest-override
 
 # Compiler flags for g++
 
