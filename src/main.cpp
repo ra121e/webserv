@@ -6,11 +6,10 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/03 21:42:56 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/09 19:00:18 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/main.hpp"
 #include <cerrno>
 #include <csignal>
 #include <exception>
@@ -21,14 +20,24 @@
 #include "../include/TmpDirCleaner.hpp"
 #include "../include/Config.hpp"
 #include "../include/Epoll.hpp"
+#include <poll.h>
+#include <sys/socket.h> // socket
+#include <sys/types.h> // accept()
+#include <netinet/in.h> // AF_INET, sockaddr_in type struct, INADDR_ANY
+#include <unistd.h> // close(sock)
+#include <stdlib.h> // memset
+#include <arpa/inet.h>
+#include <fcntl.h> //fcntl, O_NONBLOCK
 
 // Signal-safe run flag
 static volatile sig_atomic_t g_run = 1;
 
-extern "C" void handle_sigint_c(int signum)
+extern "C"
 {
-	(void)signum;
-	g_run = 0;
+	static void	handle_sigint_c(int /*unused*/)
+	{
+		g_run = 0;
+	}	
 }
 
 int	main(int argc, char **argv)

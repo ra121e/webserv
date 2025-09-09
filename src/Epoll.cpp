@@ -151,9 +151,8 @@ void	Epoll::removeResource(int _fd, CGI* resource)
 }
 
 template<>
-void	Epoll::handleReadError(int resourceFd, ClientConnection* resource)
+void	Epoll::handleReadError(int /*unused*/, ClientConnection* resource)
 {
-	(void)resourceFd; // Unused parameter
 	resource->setServerError(true);
 }
 
@@ -176,11 +175,10 @@ bool	Epoll::handleReadFromResource(ClientConnection* resource, int event_fd, con
 }
 
 template<>
-bool	Epoll::handleReadFromResource(CGI* resource, int event_fd, const char* buf, ssize_t bytes_read)
+bool	Epoll::handleReadFromResource(CGI* resource, int /*unused*/, const char* buf, ssize_t bytes_read)
 {
-	(void)event_fd;
 	resource->get_client()->appendToResBuffer(buf, static_cast<size_t>(bytes_read));
-	while (waitpid(-1, NULL, 0) > 0);
+	while (waitpid(-1, NULL, 0) > 0){}
 	return true;
 }
 

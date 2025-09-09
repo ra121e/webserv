@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <bsd/string.h>
 #include "../include/ClientConnection.hpp"
+#include <iostream>
 
 CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client), pid(0)
 {
@@ -61,6 +62,7 @@ void	CGI::execute_cgi()
 	const char *cgi_path = str_path.c_str();
 	const char	*argv[] = {cgi_path, NULL};
 	execve(cgi_path, const_cast<char *const *>(argv), envp);
+	std::cout << "cgi_path: " << cgi_path << '\n';
 	throw std::runtime_error("execve failed: " + std::string(strerror(errno)));
 }
 

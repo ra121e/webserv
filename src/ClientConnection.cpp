@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/08 21:10:03 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/09 21:35:42 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -549,7 +549,7 @@ void	ClientConnection::run_cgi_script(Epoll& epoll)
 	cgi->add_env("PATH_INFO", request.getPathInfo());
 
 	cgi->convert_env_map_to_envp(); // function to copy all the env_map variables into a environment so that i can run execve //
-
+	epoll.addPipeFds(cgi);
 	cgi->setPid(fork()); // forking to let the child inherit all the env_variables // 
 	switch (cgi->getPid()) {
 		case -1:
@@ -559,7 +559,6 @@ void	ClientConnection::run_cgi_script(Epoll& epoll)
 			break;
 		default:
 			cgi->close_pipes();
-			epoll.addPipeFds(cgi);
 			if (request.method == "POST")
 			{
 				epoll.modifyEpoll(cgi->get_server_write_fd(), EPOLLOUT, EPOLL_CTL_ADD);

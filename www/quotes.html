@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Random Inspirational Quote</title>
+  <link rel="stylesheet" href="/style">
+  <style>
+    .quote-box { max-width: 720px; margin: 20px auto; text-align: center; }
+    .quote { font-size: 1.25rem; line-height: 1.8; margin-top: 16px; color: var(--text); }
+    .spinner { display:none; margin-top: 12px; color: var(--muted); }
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>
+    async function fetchQuote(){
+      const out = document.getElementById('quote');
+      const spin = document.getElementById('spin');
+      out.textContent = '';
+      spin.style.display = 'block';
+      try{
+  const res = await fetch('quote.pl', { method:'GET', headers: { 'Accept':'text/plain' } });
+        if(res.ok){
+          const text = await res.text();
+          out.textContent = text.trim();
+        } else {
+          out.textContent = 'Failed to fetch quote: ' + res.status;
+        }
+      }catch(err){
+        out.textContent = 'Error: ' + err;
+      }finally{
+        spin.style.display = 'none';
+      }
+    }
+  </script>
+  </head>
+<body>
+<header>
+  <div class="container header-inner">
+    <div class="brand"><span class="logo"></span>Quotes</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/quotes">Quotes</a>
+      <a href="/upload">Upload/Delete</a>
+      <a href="/uploads">Uploads</a>
+      <a href="/redirect">Redirection</a>
+      <a href="/register" id="nav-register">Register</a>
+      <a href="/login" id="nav-login">Login</a>
+      <a href="/logout" id="nav-logout" style="display:none">Logout</a>
+      <a href="/lounge">Lounge</a>
+    </nav>
+  </div>
+  </header>
+  <main>
+    <div class="page">
+      <div class="card quote-box">
+        <h2>Get Inspired</h2>
+        <p class="muted">Click the button to fetch a fresh quote via CGI.</p>
+        <button onclick="fetchQuote()">Generate Quote</button>
+        <div id="spin" class="spinner">Fetching…</div>
+        <div id="quote" class="quote"></div>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <p>&copy; 2025 My Web Server Project</p>
+  </footer>
+  <script>
+  (function(){
+      function getCookie(n){ const m=document.cookie.match(new RegExp('(?:^|; )'+n.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1')+'=([^;]*)')); return m?decodeURIComponent(m[1]):null; }
+      var authed=getCookie('session_id');
+      var reg=document.getElementById('nav-register');
+      var login=document.getElementById('nav-login');
+      var logout=document.getElementById('nav-logout');
+      if (authed){ if(reg) reg.style.display='none'; if(login) login.style.display='none'; if(logout) logout.style.display='inline-block'; }
+      else { if(logout) logout.style.display='none'; }
+  })();
+  </script>
+</body>
+</html>
