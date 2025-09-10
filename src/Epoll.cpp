@@ -199,7 +199,6 @@ void	Epoll::prepRequestFrom(CGI* resource)
 {
 	modifyEpoll(resource->get_client()->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
 	server_pipe_read_fds.erase(resource->get_server_read_fd());
-	delete resource;
 }
 
 template<>
@@ -269,6 +268,7 @@ void	Epoll::handleCgiTimeOut()
 			client->makeResponse(*this);
 			modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
 		}
+		delete cgi;
 	}
 	if (!cgi_expiry_map.empty())
 	{
