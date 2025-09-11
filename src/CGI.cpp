@@ -10,7 +10,7 @@
 #include "../include/ClientConnection.hpp"
 #include <iostream>
 
-CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client), pid(0)
+CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client), pid(0), finished(false)
 {
 }
 
@@ -82,11 +82,6 @@ int	CGI::get_server_read_fd() const
 	return server_read_cgi_write_pipe[STDIN_FILENO].getFd();
 }
 
-ClientConnection*	CGI::get_client() const
-{
-	return client;
-}
-
 void	CGI::close_server_write_fd()
 {
 	server_write_cgi_read_pipe[STDOUT_FILENO].closeFd();
@@ -100,4 +95,44 @@ void	CGI::setPid(pid_t _pid)
 pid_t	CGI::getPid() const
 {
 	return pid;
+}
+
+int	CGI::get_client_fd() const
+{
+	return client->getFd();
+}
+
+void	CGI::set_client_server_error(bool error)
+{
+	client->setServerError(error);
+}
+
+void	CGI::set_client_cgi_timed_out(bool timeout)
+{
+	client->setCgiTimedOut(timeout);
+}
+
+void	CGI::append_to_client_res_buffer(const char* data, size_t size)
+{
+	client->appendToResBuffer(data, size);
+}
+
+const std::string&	CGI::get_client_buffer() const
+{
+	return client->getBuffer();
+}
+
+void	CGI::make_client_response(Epoll& epoll)
+{
+	client->makeResponse(epoll);
+}
+
+void	CGI::setFinished(bool val)
+{
+	finished = val;
+}
+
+bool	CGI::isFinished() const
+{
+	return finished;
 }

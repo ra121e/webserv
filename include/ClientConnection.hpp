@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/08 17:39:07 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/11 21:16:05 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		Server	*getServer() const;
 		void	setServerError(bool error);
 		void	setTimedOut(bool timeout);
+		void	setCgiTimedOut(bool timeout);
 
 		void	appendToBuffer(char const *data, size_t size);
 		void	appendToResBuffer(char const *data, size_t size);
@@ -72,6 +73,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		HttpResponse		response;
 		bool				server_error;
 		bool				timed_out;
+		bool				cgi_timed_out;
 		enum StatusCode
 		{
 			OK = 200,
@@ -86,7 +88,8 @@ class ClientConnection : public BaseFile, public BaseExpiration
 			CONFLICT = 409,
 			CONTENT_LENGTH_MISSING = 411,
 			PAYLOAD_TOO_LARGE = 413,
-			INTERNAL_SERVER_ERROR = 500
+			INTERNAL_SERVER_ERROR = 500,
+			GATEWAY_TIMEOUT = 504
 		};
 		static const std::size_t	MAX_HEADER_SIZE = 8192;
 

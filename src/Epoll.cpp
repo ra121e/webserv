@@ -124,46 +124,39 @@ void	Epoll::modifyEpoll(int _fd, uint32_t _events, int mode) const
 	}
 }
 
-template<>
-void	Epoll::addFdToEpoll(int _fd, Server* resource)
+void	Epoll::addFdToEpoll(int _fd, Server* server)
 {
-	servers[_fd] = resource;
+	servers[_fd] = server;
 }
 
-template<>
-void	Epoll::addFdToEpoll(int _fd, CGI* resource)
+void	Epoll::addFdToEpoll(int _fd, CGI* cgi)
 {
-	server_pipe_read_fds[_fd] = resource;
+	server_pipe_read_fds[_fd] = cgi;
 }
 
-template<>
-void	Epoll::removeResource(int _fd, ClientConnection* resource)
+void	Epoll::removeResource(int _fd, ClientConnection* client)
 {
 	clients.erase(_fd);
-	delete resource;
+	delete client;
 }
 
-template<>
-void	Epoll::removeResource(int _fd, CGI* resource)
+void	Epoll::removeResource(int _fd, CGI* cgi)
 {
 	server_pipe_read_fds.erase(_fd);
-	delete resource;
+	delete cgi;
 }
 
-template<>
-void	Epoll::handleReadError(int /*unused*/, ClientConnection* resource)
+void	Epoll::handleReadError(int /*unused*/, ClientConnection* client)
 {
-	resource->setServerError(true);
+	client->setServerError(true);
 }
 
-template<>
-void	Epoll::handleReadError(int resourceFd, CGI* resource)
+void	Epoll::handleReadError(int resourceFd, CGI* cgi)
 {
-	removeResource<CGI>(resourceFd, resource);
-	resource->get_client()->setServerError(true);
+	removeResource(resourceFd, cgi);
+	cgi->set_client_server_error(true);
 }
 
-template<>
 bool	Epoll::handleReadFromResource(ClientConnection* resource, int event_fd, const char* buf, ssize_t bytes_read)
 {
 	time_t current_time = time(NULL);
@@ -174,50 +167,46 @@ bool	Epoll::handleReadFromResource(ClientConnection* resource, int event_fd, con
 	return resource->parseRequest();
 }
 
-template<>
-bool	Epoll::handleReadFromResource(CGI* resource, int /*unused*/, const char* buf, ssize_t bytes_read)
+bool	Epoll::handleReadFromResource(CGI* cgi, int /*unused*/, const char* buf, ssize_t bytes_read)
 {
-	resource->get_client()->appendToResBuffer(buf, static_cast<size_t>(bytes_read));
-	while (waitpid(-1, NULL, 0) > 0){}
+	cgi->append_to_client_res_buffer(buf, static_cast<size_t>(bytes_read));
+	waitpid(cgi->getPid(), NULL, 0);
+	cgi->setFinished(true);
 	return true;
 }
 
-template<>
-void	Epoll::prepRequestFrom(ClientConnection* resource)
+void	Epoll::prepRequestFrom(ClientConnection* client)
 {
-	resource->makeResponse(*this);
-	if (resource->getRequest().forward_to_cgi)
+	client->makeResponse(*this);
+	if (client->getRequest().forward_to_cgi)
 	{
 		// If the request was forwarded to CGI, we don't need to send a response here
 		return;
 	}
-	modifyEpoll(resource->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+	modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
 }
 
-template<>
-void	Epoll::prepRequestFrom(CGI* resource)
+void	Epoll::prepRequestFrom(CGI* cgi)
 {
-	modifyEpoll(resource->get_client()->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
-	server_pipe_read_fds.erase(resource->get_server_read_fd());
+	modifyEpoll(cgi->get_client_fd(), EPOLLOUT, EPOLL_CTL_MOD);
+	server_pipe_read_fds.erase(cgi->get_server_read_fd());
 }
 
-template<>
-void	Epoll::handleServerWrite(ClientConnection* resource, int event_fd)
+void	Epoll::handleServerWrite(ClientConnection* client, int event_fd)
 {
-	if (resource->sendResponse())
+	if (client->sendResponse())
 	{
 		clients.erase(event_fd);
-		delete resource;
+		delete client;
 	}
 }
 
-template<>
-void	Epoll::handleServerWrite(CGI* resource, int event_fd)
+void	Epoll::handleServerWrite(CGI* cgi, int event_fd)
 {
-	const std::string& input = resource->get_client()->getBuffer();
+	const std::string& input = cgi->get_client_buffer();
 	write(event_fd, input.c_str(), input.size());
 	modifyEpoll(event_fd, 0, EPOLL_CTL_DEL);
-	resource->close_server_write_fd();
+	cgi->close_server_write_fd();
 	server_pipe_write_fds.erase(event_fd);
 }
 
@@ -225,8 +214,9 @@ void	Epoll::handleRequestTimeOut()
 {
 	uint64_t expirations = 0;
 	read(request_timer.getFd(), &expirations, sizeof(expirations));
+	time_t	now = time(NULL);
 
-	while (!expiry_queue.empty() && expiry_queue.top().getExpiration() <= time(NULL))
+	while (!expiry_queue.empty() && expiry_queue.top().getExpiration() <= now)
 	{
 		ConnectionExpiration	exp = expiry_queue.top();
 		expiry_queue.pop();
@@ -245,7 +235,7 @@ void	Epoll::handleRequestTimeOut()
 	}
 	if (!expiry_queue.empty())
 	{
-		request_timer.setTimer(expiry_queue.top().getExpiration() - time(NULL));
+		request_timer.setTimer(expiry_queue.top().getExpiration() - now);
 	}
 }
 
@@ -253,32 +243,31 @@ void	Epoll::handleCgiTimeOut()
 {
 	uint64_t expirations = 0;
 	read(cgi_timer.getFd(), &expirations, sizeof(expirations));
+	time_t	now = time(NULL);
 
-	while (!cgi_expiry_map.empty() && cgi_expiry_map.begin()->first <= time(NULL))
+	while (!cgi_expiry_queue.empty() && cgi_expiry_queue.top().getExpiration() <= now)
 	{
-		CGI*	cgi = cgi_expiry_map.begin()->second;
-		cgi_expiry_map.erase(cgi_expiry_map.begin());
-		std::map<int, ClientConnection*>::iterator client_it = clients.find(cgi->get_client()->getFd());
-		if (client_it != clients.end())
+		CGI*	cgi = cgi_expiry_queue.top().getCgi();
+		cgi_expiry_queue.pop();
+		if (!cgi->isFinished())
 		{
 			kill(cgi->getPid(), SIGKILL);
 			waitpid(cgi->getPid(), NULL, 0);
-			ClientConnection* client = client_it->second;
-			client->setServerError(true);
-			client->makeResponse(*this);
-			modifyEpoll(client->getFd(), EPOLLOUT, EPOLL_CTL_MOD);
+			cgi->set_client_cgi_timed_out(true);
+			cgi->make_client_response(*this);
+			modifyEpoll(cgi->get_client_fd(), EPOLLOUT, EPOLL_CTL_MOD);
 		}
 		delete cgi;
 	}
-	if (!cgi_expiry_map.empty())
+	if (!cgi_expiry_queue.empty())
 	{
-		cgi_timer.setTimer(cgi_expiry_map.begin()->first - time(NULL));
+		cgi_timer.setTimer(cgi_expiry_queue.top().getExpiration() - now);
 	}
 }
 
 void	Epoll::addCgiExpiry(CGI* cgi)
 {
 	time_t	now = time(NULL);
-	cgi_expiry_map[now + CGI_TIMEOUT] = cgi;
-	cgi_timer.setTimer(cgi_expiry_map.begin()->first - now);
+	cgi_expiry_queue.push(CGIExpiration(cgi, now + CGI_TIMEOUT));
+	cgi_timer.setTimer(cgi_expiry_queue.top().getExpiration() - now);
 }

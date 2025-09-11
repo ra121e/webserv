@@ -26,3 +26,8 @@ time_t	BaseExpiration::getExpiration() const
 {
 	return expiration;
 }
+
+bool	BaseExpiration::operator>(const BaseExpiration& other) const
+{
+	return expiration > other.expiration;
+}

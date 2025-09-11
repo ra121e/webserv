@@ -12,6 +12,7 @@ public:
 	BaseExpiration(const BaseExpiration& other);
 	BaseExpiration&	operator=(const BaseExpiration& other);
 	virtual ~BaseExpiration() = 0;
+	virtual bool	operator>(const BaseExpiration& other) const;
 	void	setExpiration(time_t exp);
 	time_t	getExpiration() const;
 };

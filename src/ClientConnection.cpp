@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/09 21:35:42 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/11 21:24:07 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,7 +47,8 @@ ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
 	server_addr(),
 	server(srv),
 	server_error(false),
-	timed_out(false)
+	timed_out(false),
+	cgi_timed_out(false)
 {
 	try
 	{
@@ -76,7 +77,8 @@ ClientConnection::ClientConnection(ClientConnection const &other):
 	buffer(other.buffer),
 	request(other.request),
 	server_error(other.server_error),
-	timed_out(other.timed_out)
+	timed_out(other.timed_out),
+	cgi_timed_out(other.cgi_timed_out)
 {}
 
 ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
@@ -93,6 +95,7 @@ ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
 		this->server = new Server(*other.server);
 		this->server_error = other.server_error;
 		this->timed_out = other.timed_out;
+		this->cgi_timed_out = other.cgi_timed_out;
 	}
 	return (*this);
 }
@@ -139,6 +142,11 @@ void	ClientConnection::setServerError(bool error)
 void	ClientConnection::setTimedOut(bool timeout)
 {
 	timed_out = timeout;
+}
+
+void	ClientConnection::setCgiTimedOut(bool timeout)
+{
+	cgi_timed_out = timeout;
 }
 
 void	ClientConnection::appendToBuffer(char const *data, size_t size)
@@ -305,6 +313,13 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 		sendErrorResponse(REQUEST_TIMEOUT,
 			"Request Timeout",
 			server->getErrorPage(REQUEST_TIMEOUT));
+		return;
+	}
+	if (cgi_timed_out)
+	{
+		sendErrorResponse(GATEWAY_TIMEOUT,
+			"Gateway Timeout",
+			server->getErrorPage(GATEWAY_TIMEOUT));
 		return;
 	}
 	if (request.body_too_large)

@@ -13,6 +13,7 @@
 #include "BaseFile.hpp"
 #include "Timer.hpp"
 #include "ConnectionExpiration.hpp"
+#include "CgiExpiration.hpp"
 
 class Server;
 class ClientConnection;
@@ -32,16 +33,16 @@ private:
 	static const time_t	REQUEST_TIMEOUT = 10;
 	static const time_t	CGI_TIMEOUT = 3;
 	std::priority_queue<ConnectionExpiration, std::vector<ConnectionExpiration>, std::greater<ConnectionExpiration> >	expiry_queue;
-	std::map<time_t, CGI*>	cgi_expiry_map;
+	std::priority_queue<CGIExpiration, std::vector<CGIExpiration>, std::greater<CGIExpiration> >	cgi_expiry_queue;
 
 	Epoll(const Epoll& other);
 	Epoll&	operator=(const Epoll& other);
-	template<typename T>
-	void	handleReadError(int resourceFd, T* resource);
-	template<typename T>
-	void	handleServerWrite(T* resource, int event_fd);
-	template<typename T>
-	void	addFdToEpoll(int _fd, T* resource);
+	static void	handleReadError(int, ClientConnection* client);
+	void	handleReadError(int resourceFd, CGI* cgi);
+	void	handleServerWrite(ClientConnection* client, int event_fd);
+	void	handleServerWrite(CGI* cgi, int event_fd);
+	void	addFdToEpoll(int _fd, CGI* cgi);
+	void	addFdToEpoll(int _fd, Server* server);
 	void	handleRequestTimeOut();
 	void	handleCgiTimeOut();
 public:
@@ -52,14 +53,14 @@ public:
 	void	handleEvents();
 	void	modifyEpoll(int _fd, uint32_t _events, int mode) const;
 	void	addPipeFds(CGI* cgi);
-	template<typename T>
-	void	removeResource(int _fd, T* resource);
+	void	removeResource(int _fd, CGI* cgi);
+	void	removeResource(int _fd, ClientConnection* client);
 	template<typename T>
 	void	handleClientsAndCgis(T* resource, uint32_t _events, int event_fd);
-	template<typename T>
-	bool	handleReadFromResource(T* resource, int event_fd, const char* buf, ssize_t bytes_read);
-	template<typename T>
-	void	prepRequestFrom(T* resource);
+	bool	handleReadFromResource(ClientConnection* resource, int event_fd, const char* buf, ssize_t bytes_read);
+	static bool	handleReadFromResource(CGI* cgi, int, const char* buf, ssize_t bytes_read);
+	void	prepRequestFrom(ClientConnection* client);
+	void	prepRequestFrom(CGI* cgi);
 	void	addCgiExpiry(CGI* cgi);
 };
 
@@ -77,7 +78,7 @@ void	Epoll::handleClientsAndCgis(T* resource, uint32_t _events, int event_fd)
 			for (ssize_t bytes_read = read(event_fd, buf, sizeof(buf));
 				bytes_read > 0; bytes_read = read(event_fd, buf, sizeof(buf)));
 		}
-		removeResource<T>(event_fd, resource);
+		removeResource(event_fd, resource);
 	}
 	else if (_events & EPOLLIN)
 	{
@@ -86,25 +87,25 @@ void	Epoll::handleClientsAndCgis(T* resource, uint32_t _events, int event_fd)
 		ssize_t bytes_read = read(event_fd, buf, sizeof(buf));
 		if (bytes_read == 0)
 		{
-			removeResource<T>(event_fd, resource);
+			removeResource(event_fd, resource);
 			return;
 		}
 		if (bytes_read == -1)
 		{
-			handleReadError<T>(event_fd, resource);
+			handleReadError(event_fd, resource);
 		}
 		else
 		{
-			if (!handleReadFromResource<T>(resource, event_fd, buf, bytes_read))
+			if (!handleReadFromResource(resource, event_fd, buf, bytes_read))
 			{
 				// Handle case where not enough data was received
 				return;
 			}
 		}
-		prepRequestFrom<T>(resource);
+		prepRequestFrom(resource);
 	}
 	else if (_events & EPOLLOUT)
 	{
-		handleServerWrite<T>(resource, event_fd);
+		handleServerWrite(resource, event_fd);
 	}
 }
