@@ -1,10 +1,12 @@
 #ifndef CGI_HPP
 #define CGI_HPP
 #include "Pipe.hpp"
+#include <cstddef>
 #include <ctime>
 #include <map>
 #include <string>
 #include <sys/types.h>
+#include <utility>
 
 // Forward declaration to avoid circular dependency
 class ClientConnection;
@@ -24,7 +26,7 @@ private:
 	CGI(const CGI& other);
 	CGI& operator=(const CGI& other);
 public:
-	CGI(ClientConnection* client);
+	CGI(ClientConnection* client, std::pair<std::string, std::string> cgi_params[], size_t params_size);
 	~CGI();
 	int		get_server_write_fd() const;
 	int		get_server_read_fd() const;
@@ -33,7 +35,6 @@ public:
 	void	set_client_cgi_timed_out(bool timeout);
 	void	append_to_client_res_buffer(const char* data, size_t size);
 	const std::string&	get_client_buffer() const;
-	void	add_env(const std::string &key, const std::string &value);
 	void	convert_env_map_to_envp();
 	void	execute_cgi();
 	void	get_cgi_response();

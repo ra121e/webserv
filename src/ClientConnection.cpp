@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/11 21:24:07 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/12 21:43:32 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,7 @@
 #include "../include/CGI.hpp"
 #include "../include/Epoll.hpp"
 #include <iomanip>
+#include <utility>
 #include <vector>
 
 static const char* const	GET = "GET";
@@ -48,7 +49,9 @@ ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
 	server(srv),
 	server_error(false),
 	timed_out(false),
-	cgi_timed_out(false)
+	cgi_timed_out(false),
+	DOUBLE_CRLF("\r\n\r\n"),
+	CRLF("\r\n")
 {
 	try
 	{
@@ -159,51 +162,76 @@ void	ClientConnection::appendToResBuffer(char const *data, size_t size)
 	res_buffer.append(data, size);
 }
 
-bool	ClientConnection::parseRequest()
+bool	ClientConnection::parseRequestHeader()
+{	
+	if (buffer.size() > MAX_HEADER_SIZE)
+	{
+		request.is_bad = true;
+		return true; // Bad request, too large header
+	}
+	request.header_end_pos	= buffer.find(DOUBLE_CRLF);
+	if (request.header_end_pos == std::string::npos)
+	{
+		return false; // Not enough data to parse the request
+	}
+
+	// start all of header part(until new line)
+	std::string	header_string = buffer.substr(0, request.header_end_pos + CRLF.size());
+	std::stringstream	ss(header_string);
+
+	// first line
+	ss >> request.method >> request.uri >> request.version;
+	if (request.uri.rfind('.') != std::string::npos)
+	{
+		request.extension = request.uri.substr(request.uri.rfind('.'));
+	}
+
+	// header main part
+	size_t	request_line_end = header_string.find(CRLF);
+	header_string = header_string.substr(request_line_end + CRLF.size());
+	for (size_t pos = header_string.find(CRLF); pos != std::string::npos; pos = header_string.find(CRLF))
+	{
+		const std::string& header_line = header_string.substr(0, pos);
+		size_t	colon_pos = header_line.find(": ");
+		if (colon_pos != std::string::npos)
+		{
+			const std::string&	key = header_line.substr(0, colon_pos);
+			const std::string&	value = header_line.substr(colon_pos + CRLF.size()); // skip ": "
+			request.headers[key] = value;
+		}
+		header_string.erase(0, pos + CRLF.size()); // skip "\r\n"
+	}
+	request.is_header_parse = true;
+	return true;	
+}
+
+bool	ClientConnection::parseRequestBody()
 {
-	const std::string	DOUBLE_CRLF = "\r\n\r\n";
-	const std::string	CRLF = "\r\n";
-	
+	// body part
+	buffer.erase(0, request.header_end_pos + DOUBLE_CRLF.size()); // Remove header part from buffer
+	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
+	if (it == request.headers.end())
+	{
+		request.content_length_missing = true;
+		return true; // Bad request, no Content-Length header
+	}
+	std::stringstream	ss_content_length(it->second);
+	ss_content_length >> request.content_length;
+	if (request.content_length > getServer()->getClientMaxBodySize())
+	{
+		request.body_too_large = true;
+		return true;
+	}
+	request.waiting_for_body = true;
+	return true;
+}
+
+bool	ClientConnection::parseRequest()
+{	
 	if (!request.is_header_parse)
 	{
-		if (buffer.size() > MAX_HEADER_SIZE)
-		{
-			request.is_bad = true;
-			return true; // Bad request, too large header
-		}
-		request.header_end_pos	= buffer.find(DOUBLE_CRLF);
-		if (request.header_end_pos == std::string::npos)
-		{
+		if (!parseRequestHeader())
 			return false; // Not enough data to parse the request
-		}
-
-		// start all of header part(until new line)
-		std::string	header_string = buffer.substr(0, request.header_end_pos + CRLF.size());
-		std::stringstream	ss(header_string);
-
-		// first line
-		ss >> request.method >> request.uri >> request.version;
-		if (request.uri.rfind('.') != std::string::npos)
-		{
-			request.extension = request.uri.substr(request.uri.rfind('.'));
-		}
-
-		// header main part
-		size_t	request_line_end = header_string.find(CRLF);
-		header_string = header_string.substr(request_line_end + CRLF.size());
-		for (size_t pos = header_string.find(CRLF); pos != std::string::npos; pos = header_string.find(CRLF))
-		{
-			const std::string& header_line = header_string.substr(0, pos);
-			size_t	colon_pos = header_line.find(": ");
-			if (colon_pos != std::string::npos)
-			{
-				const std::string&	key = header_line.substr(0, colon_pos);
-				const std::string&	value = header_line.substr(colon_pos + CRLF.size()); // skip ": "
-				request.headers[key] = value;
-			}
-			header_string.erase(0, pos + CRLF.size()); // skip "\r\n"
-		}
-		request.is_header_parse = true;
 	}
 
 	if (!request.waiting_for_body)
@@ -212,23 +240,8 @@ bool	ClientConnection::parseRequest()
 		{
 			return true;
 		}
-
-		// body part
-		buffer.erase(0, request.header_end_pos + DOUBLE_CRLF.size()); // Remove header part from buffer
-		std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
-		if (it == request.headers.end())
-		{
-			request.content_length_missing = true;
-			return true; // Bad request, no Content-Length header
-		}
-		std::stringstream	ss_content_length(it->second);
-		ss_content_length >> request.content_length;
-		if (request.content_length > getServer()->getClientMaxBodySize())
-		{
-			request.body_too_large = true;
-			return true;
-		}
-		request.waiting_for_body = true;
+		if (!parseRequestBody())
+			return false;
 	}
 
 	if (buffer.size() < request.content_length)
@@ -547,21 +560,23 @@ std::string ClientConnection::getFileExtension(const std::string& filepath)
 }
 
 void	ClientConnection::run_cgi_script(Epoll& epoll)
-{ 
-	CGI* cgi = new CGI(this); // pass the current ClientConnection instance to CGI constructor //
+{
+	std::pair<std::string, std::string>	cgi_params[] = {
+		std::make_pair("REQUEST_METHOD", request.method),
+		std::make_pair("QUERY_STRING", request.getQueryString()),
+		std::make_pair("CONTENT_LENGTH", request.getContentLength()),
+		std::make_pair("CONTENT_TYPE", request.getContentType()),
+		std::make_pair("SCRIPT_NAME", request.getScriptName()),
+		std::make_pair("SERVER_NAME", server_host),
+		std::make_pair("SERVER_PORT", server_port),
+		std::make_pair("SERVER_PROTOCOL", request.version),
+		std::make_pair("REMOTE_ADDR", host),
+		std::make_pair("HTTP_COOKIE", request.getCookie()),
+		std::make_pair("GATEWAY_INTERFACE", "CGI/1.1"),
+		std::make_pair("PATH_INFO", request.getPathInfo())
+	};
 
-	cgi->add_env("REQUEST_METHOD", request.method);
-	cgi->add_env("QUERY_STRING", request.getQueryString());
-	cgi->add_env("CONTENT_LENGTH", request.getContentLength());
-	cgi->add_env("CONTENT_TYPE", request.getContentType());
-	cgi->add_env("SCRIPT_NAME", request.getScriptName());
-	cgi->add_env("SERVER_NAME", server_host);
-	cgi->add_env("SERVER_PORT", server_port);
-	cgi->add_env("SERVER_PROTOCOL", request.version);
-	cgi->add_env("REMOTE_ADDR", host);
-	cgi->add_env("HTTP_COOKIE", request.getCookie());
-	cgi->add_env("GATEWAY_INTERFACE", "CGI/1.1");
-	cgi->add_env("PATH_INFO", request.getPathInfo());
+	CGI* cgi = new CGI(this, cgi_params, sizeof(cgi_params) / sizeof(cgi_params[0]));
 
 	cgi->convert_env_map_to_envp(); // function to copy all the env_map variables into a environment so that i can run execve //
 	epoll.addPipeFds(cgi);

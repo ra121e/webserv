@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/11 21:16:05 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/12 21:41:32 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -92,6 +92,8 @@ class ClientConnection : public BaseFile, public BaseExpiration
 			GATEWAY_TIMEOUT = 504
 		};
 		static const std::size_t	MAX_HEADER_SIZE = 8192;
+		const std::string	DOUBLE_CRLF;
+		const std::string	CRLF;
 
 		static std::string	readFileContent(StatusCode status_code,
 			const std::string& status_text,
@@ -105,6 +107,8 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		StatusCode		handleRegistration();
 		static std::string	generateSessionId(std::size_t length);
 		bool	checkSessionCookie();
+		bool	parseRequestHeader();
+		bool	parseRequestBody();
 };
 
 

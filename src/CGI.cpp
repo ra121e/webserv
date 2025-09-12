@@ -9,8 +9,11 @@
 #include <bsd/string.h>
 #include "../include/ClientConnection.hpp"
 #include <iostream>
+#include <utility>
 
-CGI::CGI(ClientConnection* _client) : envp(NULL), client(_client), pid(0), finished(false)
+CGI::CGI(ClientConnection* _client, std::pair<std::string, std::string> cgi_params[], size_t params_size) :
+	env_map(cgi_params, cgi_params + params_size),
+	envp(NULL), client(_client), pid(0), finished(false)
 {
 }
 
@@ -25,11 +28,6 @@ CGI::~CGI()
 		delete[] envp;
 	}
 	envp = NULL;
-}
-
-void	CGI::add_env(const std::string &key, const std::string &value)
-{
-	env_map[key] = value;
 }
 
 void	CGI::convert_env_map_to_envp()
