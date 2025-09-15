@@ -15,8 +15,8 @@ NAME_S	=	webserv
 SRC_F_S	=	main.cpp Server.cpp Location.cpp Network.cpp Config.cpp\
             Epoll.cpp ClientConnection.cpp BaseExpiration.cpp\
             HttpRequest.cpp HttpResponse.cpp TmpDirCleaner.cpp BaseFile.cpp\
-            Timer.cpp ConnectionExpiration.cpp CGI.cpp Pipe.cpp User.cpp\
-			CgiExpiration.cpp Directory.cpp
+            Timer.cpp FdExpiration.cpp CGI.cpp Pipe.cpp User.cpp\
+			Directory.cpp
 
 SRC_DIR	=	src
 SRC_S	=	$(patsubst %.cpp,$(SRC_DIR)/%.cpp,$(SRC_F_S))
@@ -34,7 +34,8 @@ LDLIBS  =   -lbsd
 
 CXXFLAGS    =   -std=c++98 -Wall -Wextra -Werror -Weverything -MMD -MP -g3\
                 -fstandalone-debug -Wno-suggest-destructor-override -Wno-padded\
-				-Wno-weak-vtables -Wno-missing-noreturn -Wno-suggest-override
+				-Wno-weak-vtables -Wno-missing-noreturn -Wno-suggest-override\
+				-Wno-unsafe-buffer-usage
 
 # Compiler flags for g++
 

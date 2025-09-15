@@ -1,5 +1,6 @@
 #ifndef EPOLL_HPP
 #define EPOLL_HPP
+#include <string>
 #include <cstdio>
 #include <ctime>
 #include <functional>
@@ -11,13 +12,13 @@
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include "BaseFile.hpp"
+#include "SharedPointer.hpp"
 #include "Timer.hpp"
-#include "ConnectionExpiration.hpp"
-#include "CgiExpiration.hpp"
+#include "FdExpiration.hpp"
+#include "ClientConnection.hpp"
+#include "CGI.hpp"
 
 class Server;
-class ClientConnection;
-class CGI;
 
 class Epoll: public BaseFile
 {
@@ -31,11 +32,10 @@ private:
 	Timer	request_timer;
 	Timer	cgi_timer;
 	static const time_t	REQUEST_TIMEOUT = 10;
-	static const time_t	CGI_TIMEOUT = 3;
-	std::priority_queue<ConnectionExpiration, std::vector<ConnectionExpiration>,
-		std::greater<ConnectionExpiration> >	expiry_queue;
-	std::priority_queue<CGIExpiration, std::vector<CGIExpiration>,
-		std::greater<CGIExpiration> >	cgi_expiry_queue;
+	std::priority_queue<FdExpiration, std::vector<FdExpiration>,
+		std::greater<FdExpiration> >	expiry_queue;
+	std::priority_queue<FdExpiration, std::vector<FdExpiration>,
+		std::greater<FdExpiration> >	cgi_expiry_queue;
 
 	static void	handleReadError(int, const SharedPointer<ClientConnection>& client);
 	void	handleReadError(int resourceFd, const SharedPointer<CGI>& cgi);
@@ -51,7 +51,7 @@ public:
 	void	addServer(int _fd, const SharedPointer<Server>& server);
 	void	handleEvents();
 	void	modifyEpoll(int _fd, uint32_t _events, int mode) const;
-	void	addPipeFds(const SharedPointer<CGI>& cgi);
+	void	addPipeFds(const SharedPointer<CGI>& cgi, const std::string& method);
 	void	removeResource(int _fd, const SharedPointer<CGI>& cgi);
 	void	removeResource(int _fd, const SharedPointer<ClientConnection>& client);
 	template<typename T>
@@ -62,7 +62,7 @@ public:
 		const char* buf, ssize_t bytes_read);
 	void	prepRequestFrom(const SharedPointer<ClientConnection>& client);
 	void	prepRequestFrom(const SharedPointer<CGI>& cgi);
-	void	addCgiExpiry(const SharedPointer<CGI>& cgi);
+	void	addCgiExpiry(const SharedPointer<CGI>& cgi, time_t expiry);
 };
 
 #endif

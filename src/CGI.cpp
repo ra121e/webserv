@@ -12,9 +12,11 @@
 #include <utility>
 
 CGI::CGI(const SharedPointer<ClientConnection>& _client, std::pair<std::string, std::string> cgi_params[],
-	size_t params_size) :
+	size_t params_size, time_t expiry) :
+	BaseExpiration(expiry),
 	env_map(cgi_params, cgi_params + params_size),
-	client(_client), pid(0), finished(false)
+	client(_client),
+	pid(0)
 {
 }
 
@@ -26,7 +28,7 @@ char**	CGI::convert_env_map_to_envp()
 	for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
 		it != env_map.end(); ++it) // const iterator so that values doesnt change //
 	{
-		std::string pair = it->first + "=" + it->second;
+		const std::string& pair = it->first + "=" + it->second;
 		char *cstr = new char[pair.size() + 1];
 		strlcpy(cstr, pair.c_str(), pair.size() + 1); // convert pair to C string so you can copy //
 		envp[index++] = cstr;
@@ -115,16 +117,6 @@ const std::string&	CGI::get_client_buffer() const
 void	CGI::make_client_response(Epoll& epoll)
 {
 	client->makeResponse(epoll, getClientConnection());
-}
-
-void	CGI::setFinished(bool val)
-{
-	finished = val;
-}
-
-bool	CGI::isFinished() const
-{
-	return finished;
 }
 
 const SharedPointer<ClientConnection>& CGI::getClientConnection() const

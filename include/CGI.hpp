@@ -1,5 +1,6 @@
 #ifndef CGI_HPP
 #define CGI_HPP
+#include "BaseExpiration.hpp"
 #include "Pipe.hpp"
 #include <cstddef>
 #include <ctime>
@@ -13,7 +14,7 @@
 // Forward declaration to avoid circular dependency
 class Epoll;
 
-class CGI
+class CGI: public BaseExpiration
 {
 private:
 	Pipe	server_write_cgi_read_pipe; // pipe for stdin
@@ -21,13 +22,12 @@ private:
 	std::map<std::string, std::string> env_map; // environment variables for the CGI script
 	SharedPointer<ClientConnection> client; // Pointer to the associated ClientConnection
 	pid_t	pid;
-	bool	finished;
 
 	CGI(const CGI& other);
 	CGI& operator=(const CGI& other);
 public:
 	CGI(const SharedPointer<ClientConnection>& client,
-		std::pair<std::string, std::string> cgi_params[], size_t params_size);
+		std::pair<std::string, std::string> cgi_params[], size_t params_size, time_t expiry);
 	int		get_server_write_fd() const;
 	int		get_server_read_fd() const;
 	int		get_client_fd() const;
@@ -44,8 +44,6 @@ public:
 	void	setPid(pid_t _pid);
 	pid_t	getPid() const;
 	void	make_client_response(Epoll& epoll);
-	void	setFinished(bool val);
-	bool	isFinished() const;
 };
 
 #endif

@@ -89,6 +89,7 @@ class ClientConnection : public BaseFile, public BaseExpiration
 			GATEWAY_TIMEOUT = 504
 		};
 		static const std::size_t	MAX_HEADER_SIZE = 8192;
+		static const time_t	CGI_TIMEOUT = 3;
 
 		static std::string	readFileContent(StatusCode status_code,
 			const std::string& status_text,

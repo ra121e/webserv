@@ -14,7 +14,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
-#include "../include/ConnectionExpiration.hpp"
+#include "../include/FdExpiration.hpp"
 #include "../include/Timer.hpp"
 #include "../include/ClientConnection.hpp"
 #include "../include/CGI.hpp"
@@ -29,13 +29,13 @@ Epoll::Epoll(int _fd): BaseFile(_fd), events()
 // set client fd and event to "application form"
 void	Epoll::addClient(int server_fd)
 {
-	time_t				current_time = time(NULL);
+	time_t	expiry = time(NULL) + REQUEST_TIMEOUT;
 	SharedPointer<ClientConnection>	client(new ClientConnection(server_fd, servers[server_fd],
-		current_time + REQUEST_TIMEOUT));
+		expiry));
 
 	modifyEpoll(client->getFd(), EPOLLIN, EPOLL_CTL_ADD);
 	clients.insert(std::make_pair(client->getFd(), client));
-	expiry_queue.push(ConnectionExpiration(client->getFd(), current_time + REQUEST_TIMEOUT));
+	expiry_queue.push(FdExpiration(client->getFd(), expiry));
 	request_timer.setTimer(REQUEST_TIMEOUT);
 }
 
@@ -45,10 +45,13 @@ void	Epoll::addServer(int _fd, const SharedPointer<Server>& server)
 	modifyEpoll(_fd, EPOLLIN, EPOLL_CTL_ADD);
 }
 
-void	Epoll::addPipeFds(const SharedPointer<CGI>& cgi)
+void	Epoll::addPipeFds(const SharedPointer<CGI>& cgi, const std::string& method)
 {
 	server_pipe_read_fds.insert(std::make_pair(cgi->get_server_read_fd(), cgi));
-	server_pipe_write_fds.insert(std::make_pair(cgi->get_server_write_fd(), cgi));
+	if (method == "POST")
+	{
+		server_pipe_write_fds.insert(std::make_pair(cgi->get_server_write_fd(), cgi));
+	}
 	modifyEpoll(cgi->get_server_read_fd(), EPOLLIN, EPOLL_CTL_ADD);
 }
 
@@ -152,7 +155,7 @@ bool	Epoll::handleReadFromResource(const SharedPointer<ClientConnection>& resour
 	int event_fd, const char* buf, ssize_t bytes_read)
 {
 	time_t current_time = time(NULL);
-	expiry_queue.push(ConnectionExpiration(event_fd, current_time + REQUEST_TIMEOUT));
+	expiry_queue.push(FdExpiration(event_fd, current_time + REQUEST_TIMEOUT));
 	resource->setExpiration(current_time + REQUEST_TIMEOUT);
 	request_timer.setTimer(expiry_queue.top().getExpiration() - current_time);
 	resource->appendToBuffer(buf, static_cast<size_t>(bytes_read));
@@ -164,7 +167,6 @@ bool	Epoll::handleReadFromResource(const SharedPointer<CGI>& cgi, int /*unused*/
 {
 	cgi->append_to_client_res_buffer(buf, static_cast<size_t>(bytes_read));
 	waitpid(cgi->getPid(), NULL, 0);
-	cgi->setFinished(true);
 	return true;
 }
 
@@ -210,7 +212,7 @@ void	Epoll::handleRequestTimeOut()
 
 	while (!expiry_queue.empty() && expiry_queue.top().getExpiration() <= now)
 	{
-		ConnectionExpiration	exp = expiry_queue.top();
+		FdExpiration	exp = expiry_queue.top();
 		expiry_queue.pop();
 		std::map<int, SharedPointer<ClientConnection> >::iterator client_it = clients.find(exp.getFd());
 		if (client_it != clients.end())
@@ -239,17 +241,23 @@ void	Epoll::handleCgiTimeOut()
 
 	while (!cgi_expiry_queue.empty() && cgi_expiry_queue.top().getExpiration() <= now)
 	{
-		SharedPointer<CGI>	cgi = cgi_expiry_queue.top().getCgi();
+		FdExpiration exp = cgi_expiry_queue.top();
 		cgi_expiry_queue.pop();
-		if (!cgi->isFinished())
+		std::map<int, SharedPointer<CGI> >::iterator cgi_it = server_pipe_read_fds.find(exp.getFd());
+		if (cgi_it != server_pipe_read_fds.end())
 		{
+			SharedPointer<CGI> cgi = cgi_it->second;
+			if (cgi->getExpiration() != exp.getExpiration())
+			{
+				continue;
+			}
 			kill(cgi->getPid(), SIGKILL);
 			waitpid(cgi->getPid(), NULL, 0);
 			cgi->set_client_cgi_timed_out(true);
 			cgi->make_client_response(*this);
+			server_pipe_read_fds.erase(cgi_it);
 			modifyEpoll(cgi->get_client_fd(), EPOLLOUT, EPOLL_CTL_MOD);
 		}
-		removeResource(cgi->get_server_read_fd(), cgi);
 	}
 	if (!cgi_expiry_queue.empty())
 	{
@@ -257,9 +265,8 @@ void	Epoll::handleCgiTimeOut()
 	}
 }
 
-void	Epoll::addCgiExpiry(const SharedPointer<CGI>& cgi)
+void	Epoll::addCgiExpiry(const SharedPointer<CGI>& cgi, time_t expiry)
 {
-	time_t	now = time(NULL);
-	cgi_expiry_queue.push(CGIExpiration(cgi, now + CGI_TIMEOUT));
-	cgi_timer.setTimer(cgi_expiry_queue.top().getExpiration() - now);
+	cgi_expiry_queue.push(FdExpiration(cgi->get_server_read_fd(), expiry));
+	cgi_timer.setTimer(cgi_expiry_queue.top().getExpiration() - time(NULL));
 }

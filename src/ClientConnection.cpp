@@ -550,9 +550,11 @@ void	ClientConnection::run_cgi_script(Epoll& epoll, const SharedPointer<ClientCo
 		std::make_pair("PATH_INFO", request.getPathInfo())
 	};
 
-	SharedPointer<CGI> cgi(new CGI(client_ptr, cgi_params, sizeof(cgi_params) / sizeof(cgi_params[0])));
+	time_t	expiry = time(NULL) + CGI_TIMEOUT;
+	SharedPointer<CGI> cgi(new CGI(client_ptr, cgi_params,
+		sizeof(cgi_params) / sizeof(cgi_params[0]), expiry));
 
-	epoll.addPipeFds(cgi);
+	epoll.addPipeFds(cgi, request.method);
 	cgi->setPid(fork()); // forking to let the child inherit all the env_variables // 
 	switch (cgi->getPid()) {
 		case -1:
@@ -566,7 +568,7 @@ void	ClientConnection::run_cgi_script(Epoll& epoll, const SharedPointer<ClientCo
 			{
 				epoll.modifyEpoll(cgi->get_server_write_fd(), EPOLLOUT, EPOLL_CTL_ADD);
 			}
-			epoll.addCgiExpiry(cgi);
+			epoll.addCgiExpiry(cgi, expiry);
 	}
 }
 
