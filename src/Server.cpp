@@ -14,46 +14,6 @@
 #include <fcntl.h>
 #include <algorithm>
 
-Server::Server() : client_max_body_size()
-{
-}
-
-Server::Server(const Server& other): client_max_body_size(other.client_max_body_size), error_pages(other.error_pages), locations(other.locations)
-{
-	for (std::vector<Network*>::const_iterator it = other.networks.begin(); it != other.networks.end(); ++it)
-	{
-		networks.push_back(new Network(**it));
-	}
-}
-
-Server&	Server::operator=(const Server& other)
-{
-	if (this != &other)
-	{
-		for (std::vector<Network*>::const_iterator it = networks.begin(); it != networks.end(); ++it)
-		{
-			delete *it;
-		}
-		networks.clear();
-		for (std::vector<Network*>::const_iterator it = other.networks.begin(); it != other.networks.end(); ++it)
-		{
-			networks.push_back(new Network(**it));
-		}
-		client_max_body_size = other.client_max_body_size;
-		error_pages = other.error_pages;
-		locations = other.locations;
-	}
-	return *this;
-}
-
-Server::~Server()
-{
-	for (std::vector<Network*>::iterator it = networks.begin(); it != networks.end(); ++it)
-	{
-		delete *it;
-	}
-}
-
 void	Server::parse_listen(std::istringstream &ss)
 {
 	std::string	word;
@@ -171,14 +131,14 @@ void	Server::parse_route(std::ifstream& infile, std::istringstream& ss)
 		throw std::ios_base::failure("Error: expected a route path");
 }
 
-void	Server::addNetwork(Network* net)
+void	Server::addNetwork(const SharedPointer<Network>& net)
 {
 	networks.push_back(net);
 }
 
-void	Server::setClientMaxBodySize(uint64_t _clientMaxBodySize)
+void	Server::setClientMaxBodySize(uint64_t _client_max_body_size)
 {
-	client_max_body_size = _clientMaxBodySize;
+	client_max_body_size = _client_max_body_size;
 }
 
 void	Server::addErrorPage(const std::string& error, const std::string& page)
@@ -191,13 +151,15 @@ void	Server::addLocation(const std::string& path, const Location& location)
 	locations[path] = location;
 }
 
-std::map<std::string, Location>::const_iterator	Server::getLocationIteratorMatch(std::string const &uri, const std::string& extension, HttpRequest& request) const
+std::map<std::string, Location>::const_iterator	Server::getLocationIteratorMatch
+(std::string const &uri, const std::string& extension, HttpRequest& request) const
 {
 	std::string clean_uri = uri;
 	size_t pos = clean_uri.find('?');
 	if (pos != std::string::npos)
 		clean_uri.erase(pos);
-	for (std::map<std::string, Location>::const_iterator it = locations.begin(); it != locations.end(); ++it)
+	for (std::map<std::string, Location>::const_iterator it = locations.begin();
+	it != locations.end(); ++it)
 	{
 		const std::string& path = it->first;
 		if (!extension.empty() && it->second.supports_cgi_extension(extension))
@@ -228,13 +190,14 @@ const std::map<std::string, Location> &Server::getLocations() const
 
 void	Server::setup()
 {
-	for (std::vector<Network*>::iterator it = networks.begin(); it != networks.end(); ++it)
+	for (std::vector<SharedPointer<Network> >::iterator it = networks.begin();
+	it != networks.end(); ++it)
 	{
 		(*it)->setupListener();
 	}
 }
 
-const std::vector<Network*>&	Server::getNetworks() const
+const std::vector<SharedPointer<Network> >&	Server::getNetworks() const
 {
 	return networks;
 }

@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 16:52:27 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/12 21:41:32 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/15 22:02:08 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,6 @@
 # include "Server.hpp"
 #include <cstddef>
 #include <ctime>
-#include <map>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string>
@@ -33,18 +32,15 @@ class CGI;   // forward declaration
 class ClientConnection : public BaseFile, public BaseExpiration
 {
 	public:
-		ClientConnection(int server_fd, Server *srv, time_t _expiry);
-		ClientConnection(ClientConnection const &other);
-		ClientConnection	&operator=(ClientConnection const &other);
-		~ClientConnection();
+		ClientConnection(int server_fd, const SharedPointer<Server>& srv, time_t _expiry);
 
 		const HttpRequest	&getRequest() const;
 		const std::string	&getBuffer() const;
 
 		const HttpResponse	&getResponse() const;
 		const std::string	&getResponseBuffer() const;
-		const std::string& getHost() const;
-		Server	*getServer() const;
+		const std::string&	getHost() const;
+		const SharedPointer<Server>&	getServer() const;
 		void	setServerError(bool error);
 		void	setTimedOut(bool timeout);
 		void	setCgiTimedOut(bool timeout);
@@ -52,17 +48,18 @@ class ClientConnection : public BaseFile, public BaseExpiration
 		void	appendToBuffer(char const *data, size_t size);
 		void	appendToResBuffer(char const *data, size_t size);
 		bool	parseRequest();
-		void	makeResponse(Epoll& epoll);
+		void	makeResponse(Epoll& epoll, const SharedPointer<ClientConnection>& client_ptr);
 		bool	sendResponse();
-		static void	retrieveHostPort(std::string& _host, std::string& _port, struct sockaddr* addr, socklen_t _addr_len);
-		void	run_cgi_script(Epoll& epoll);
+		static void	retrieveHostPort(std::string& _host, std::string& _port,
+			struct sockaddr* addr, socklen_t _addr_len);
+		void	run_cgi_script(Epoll& epoll, const SharedPointer<ClientConnection>& client_ptr);
 
 	private:
 		socklen_t			addr_len;
 		struct sockaddr_in	client_addr;
 		socklen_t			server_addr_len;
 		struct sockaddr_storage	server_addr;
-		Server				*server;
+		SharedPointer<Server>	server;
 		std::string			server_host;
 		std::string			server_port;
 		std::string			host;
@@ -92,8 +89,6 @@ class ClientConnection : public BaseFile, public BaseExpiration
 			GATEWAY_TIMEOUT = 504
 		};
 		static const std::size_t	MAX_HEADER_SIZE = 8192;
-		const std::string	DOUBLE_CRLF;
-		const std::string	CRLF;
 
 		static std::string	readFileContent(StatusCode status_code,
 			const std::string& status_text,

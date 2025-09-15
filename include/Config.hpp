@@ -2,19 +2,19 @@
 #define CONFIG_HPP
 #include <vector>
 #include "Server.hpp"
+#include "SharedPointer.hpp"
 
 class Config
 {
 private:
-	std::vector<Server*>	servers;
+	std::vector<SharedPointer<Server> >	servers;
 	Config(const Config& other);
 	Config&	operator=(const Config& other);
 public:
 	Config();
-	~Config();
-	void	addServer(Server* server);
+	void	addServer(const SharedPointer<Server>& server);
 	void	setupServers();
-	const std::vector<Server*>&	getServers() const;
+	const std::vector<SharedPointer<Server> >&	getServers() const;
 	void	get_file_config(const char *filename);
 	void	parse_server(std::ifstream& infile, std::istringstream& iss);
 };

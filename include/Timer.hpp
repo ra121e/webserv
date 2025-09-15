@@ -11,9 +11,6 @@ class Timer : public BaseFile
 {
 public:
 	Timer();
-	Timer(const Timer& other);
-	Timer& operator=(const Timer& other);
-	~Timer();
 
 	void setTimer(time_t duration) const;
 };

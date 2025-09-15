@@ -11,28 +11,16 @@
 #include <iostream>
 #include <utility>
 
-CGI::CGI(ClientConnection* _client, std::pair<std::string, std::string> cgi_params[], size_t params_size) :
+CGI::CGI(const SharedPointer<ClientConnection>& _client, std::pair<std::string, std::string> cgi_params[],
+	size_t params_size) :
 	env_map(cgi_params, cgi_params + params_size),
-	envp(NULL), client(_client), pid(0), finished(false)
+	client(_client), pid(0), finished(false)
 {
 }
 
-CGI::~CGI()
+char**	CGI::convert_env_map_to_envp()
 {
-	if (envp)
-	{
-		for (std::size_t i = 0; envp[i]; ++i)
-		{
-			delete[] envp[i];
-		}
-		delete[] envp;
-	}
-	envp = NULL;
-}
-
-void	CGI::convert_env_map_to_envp()
-{
-	envp = new char*[env_map.size() + 1]; // run_cgi function for env_map //
+	char** envp = new char*[env_map.size() + 1]; // run_cgi function for env_map //
 	std::size_t	index = 0;
 
 	for (std::map<std::string, std::string>::const_iterator it = env_map.begin();
@@ -44,21 +32,25 @@ void	CGI::convert_env_map_to_envp()
 		envp[index++] = cstr;
 	}
 	envp[index] = NULL;
+	return envp;
 }
 
 void	CGI::execute_cgi()
 {
-	if (dup2(server_write_cgi_read_pipe[STDIN_FILENO].getFd(), STDIN_FILENO) == -1) // dup2 the readend of stdin since thats needed // 
+	if (dup2(server_write_cgi_read_pipe[STDIN_FILENO].getFd(), STDIN_FILENO) == -1)
+	// dup2 the readend of stdin since thats needed // 
 	{
 		throw std::runtime_error("dup2 failed for stdin: " + std::string(strerror(errno)));
 	}
-	if (dup2(server_read_cgi_write_pipe[STDOUT_FILENO].getFd(), STDOUT_FILENO) == -1) // dup2 the write end of stdout as whatever the child needs to output goes into that area // 
+	if (dup2(server_read_cgi_write_pipe[STDOUT_FILENO].getFd(), STDOUT_FILENO) == -1)
+	// dup2 the write end of stdout as whatever the child needs to output goes into that area // 
 	{
 		throw std::runtime_error("dup2 failed for stdout: " + std::string(strerror(errno)));
 	}
 	std::string	str_path = "cgi-bin" + env_map["PATH_INFO"];
 	const char *cgi_path = str_path.c_str();
 	const char	*argv[] = {cgi_path, NULL};
+	char	**envp = convert_env_map_to_envp();
 	execve(cgi_path, const_cast<char *const *>(argv), envp);
 	std::cout << "cgi_path: " << cgi_path << '\n';
 	throw std::runtime_error("execve failed: " + std::string(strerror(errno)));
@@ -122,7 +114,7 @@ const std::string&	CGI::get_client_buffer() const
 
 void	CGI::make_client_response(Epoll& epoll)
 {
-	client->makeResponse(epoll);
+	client->makeResponse(epoll, getClientConnection());
 }
 
 void	CGI::setFinished(bool val)
@@ -133,4 +125,9 @@ void	CGI::setFinished(bool val)
 bool	CGI::isFinished() const
 {
 	return finished;
+}
+
+const SharedPointer<ClientConnection>& CGI::getClientConnection() const
+{
+	return client;
 }

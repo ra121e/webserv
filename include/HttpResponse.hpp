@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/07 20:58:04 by athonda           #+#    #+#             */
-/*   Updated: 2025/08/11 18:44:02 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/15 18:27:55 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,5 @@ class HttpResponse
 		void	setBody(std::string const &body_content, std::string const &content_type);
 		std::string	makeString() const;
 };
-
 
 #endif

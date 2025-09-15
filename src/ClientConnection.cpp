@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/05 17:00:54 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/12 21:43:32 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/15 21:56:26 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,12 +35,15 @@
 #include <iomanip>
 #include <utility>
 #include <vector>
+#include "../include/Directory.hpp"
 
-static const char* const	GET = "GET";
-static const char* const	POST = "POST";
-static const char* const	DELETE = "DELETE";
+static const char GET[] = "GET";
+static const char POST[] = "POST";
+static const char DELETE[] = "DELETE";
+static const char DOUBLE_CRLF[] = "\r\n\r\n";
+static const char CRLF[] = "\r\n";
 
-ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
+ClientConnection::ClientConnection(int server_fd, const SharedPointer<Server>& srv, time_t _expiry):
 	BaseExpiration(_expiry),
 	addr_len(sizeof(client_addr)),
 	client_addr(),
@@ -49,62 +52,26 @@ ClientConnection::ClientConnection(int server_fd, Server *srv, time_t _expiry):
 	server(srv),
 	server_error(false),
 	timed_out(false),
-	cgi_timed_out(false),
-	DOUBLE_CRLF("\r\n\r\n"),
-	CRLF("\r\n")
+	cgi_timed_out(false)
 {
 	try
 	{
-		setFd(accept4(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC));
+		setFd(accept4(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr),
+		&addr_len, SOCK_NONBLOCK | SOCK_CLOEXEC));
 	}
 	catch (const std::invalid_argument&)
 	{
 		throw std::runtime_error("accept4: " + std::string(strerror(errno)));
 	}
-	if (getsockname(server_fd, reinterpret_cast<struct sockaddr*>(&server_addr), &server_addr_len) == -1)
+	if (getsockname(server_fd, reinterpret_cast<struct sockaddr*>(&server_addr),
+	&server_addr_len) == -1)
 	{
 		throw std::runtime_error("getsockname: " + std::string(strerror(errno)));
 	}
-	retrieveHostPort(server_host, server_port, reinterpret_cast<struct sockaddr*>(&server_addr), server_addr_len);
-	retrieveHostPort(host, port, reinterpret_cast<struct sockaddr*>(&client_addr), addr_len);
-}
-
-ClientConnection::ClientConnection(ClientConnection const &other):
-	BaseFile(other),
-	BaseExpiration(other),
-	addr_len(other.addr_len),
-	client_addr(other.client_addr),
-	server_addr_len(other.server_addr_len),
-	server_addr(other.server_addr),
-	server(new Server(*other.server)),
-	buffer(other.buffer),
-	request(other.request),
-	server_error(other.server_error),
-	timed_out(other.timed_out),
-	cgi_timed_out(other.cgi_timed_out)
-{}
-
-ClientConnection	&ClientConnection::operator=(ClientConnection const &other)
-{
-	if (this != &other)
-	{
-		addr_len = other.addr_len;
-		client_addr = other.client_addr;
-		BaseFile::operator=(other);
-		BaseExpiration::operator=(other);
-		this->buffer = other.buffer;
-		this->request = other.request;
-		delete this->server;
-		this->server = new Server(*other.server);
-		this->server_error = other.server_error;
-		this->timed_out = other.timed_out;
-		this->cgi_timed_out = other.cgi_timed_out;
-	}
-	return (*this);
-}
-
-ClientConnection::~ClientConnection()
-{
+	retrieveHostPort(server_host, server_port,
+		reinterpret_cast<struct sockaddr*>(&server_addr), server_addr_len);
+	retrieveHostPort(host, port,
+		reinterpret_cast<struct sockaddr*>(&client_addr), addr_len);
 }
 
 const HttpRequest	&ClientConnection::getRequest() const
@@ -132,7 +99,7 @@ const std::string& ClientConnection::getHost() const
 	return host;
 }
 
-Server	*ClientConnection::getServer() const
+const SharedPointer<Server>&	ClientConnection::getServer() const
 {
 	return (server);
 }
@@ -176,7 +143,7 @@ bool	ClientConnection::parseRequestHeader()
 	}
 
 	// start all of header part(until new line)
-	std::string	header_string = buffer.substr(0, request.header_end_pos + CRLF.size());
+	std::string	header_string = buffer.substr(0, request.header_end_pos + sizeof(CRLF) - 1);
 	std::stringstream	ss(header_string);
 
 	// first line
@@ -188,7 +155,7 @@ bool	ClientConnection::parseRequestHeader()
 
 	// header main part
 	size_t	request_line_end = header_string.find(CRLF);
-	header_string = header_string.substr(request_line_end + CRLF.size());
+	header_string = header_string.substr(request_line_end + sizeof(CRLF) - 1); // Remove request line from header_string
 	for (size_t pos = header_string.find(CRLF); pos != std::string::npos; pos = header_string.find(CRLF))
 	{
 		const std::string& header_line = header_string.substr(0, pos);
@@ -196,10 +163,10 @@ bool	ClientConnection::parseRequestHeader()
 		if (colon_pos != std::string::npos)
 		{
 			const std::string&	key = header_line.substr(0, colon_pos);
-			const std::string&	value = header_line.substr(colon_pos + CRLF.size()); // skip ": "
+			const std::string&	value = header_line.substr(colon_pos + sizeof(CRLF) - 1); // skip ": "
 			request.headers[key] = value;
 		}
-		header_string.erase(0, pos + CRLF.size()); // skip "\r\n"
+		header_string.erase(0, pos + sizeof(CRLF) - 1); // skip "\r\n"
 	}
 	request.is_header_parse = true;
 	return true;	
@@ -208,7 +175,7 @@ bool	ClientConnection::parseRequestHeader()
 bool	ClientConnection::parseRequestBody()
 {
 	// body part
-	buffer.erase(0, request.header_end_pos + DOUBLE_CRLF.size()); // Remove header part from buffer
+	buffer.erase(0, request.header_end_pos + sizeof(DOUBLE_CRLF) - 1); // Remove header part from buffer
 	std::map<std::string, std::string>::iterator it = request.headers.find("Content-Length");
 	if (it == request.headers.end())
 	{
@@ -290,22 +257,18 @@ std::string	ClientConnection::makeIndexof(std::string const &path_dir, std::stri
 	std::stringstream	html;
 	html << "<html><body><h1>Index of " << uri << "</h1>";
 
-	DIR	*dir = opendir(path_dir.c_str());
-	if (dir)
+	Directory dir(path_dir.c_str());
+	struct dirent	*ent = NULL;
+	while ((ent = dir.read()) != NULL)
 	{
-		struct dirent	*ent;
-		while ((ent = readdir(dir)) != NULL)
-		{
 //			html << "<a href=\"" << uri << ent->d_name << "\">" << ent->d_name << "</a><p>";
-			html << ent->d_name << "<p>";
-		}
-		closedir(dir);
+		html << ent->d_name << "<p>";
 	}
 	html << "</body></html>";
 	return (html.str());
 }
 
-void	ClientConnection::makeResponse(Epoll& epoll)
+void	ClientConnection::makeResponse(Epoll& epoll, const SharedPointer<ClientConnection>& client_ptr)
 {
 	if (request.is_bad)
 	{
@@ -380,7 +343,7 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 	}
 	if (request.forward_to_cgi)
 	{
-		run_cgi_script(epoll);
+		run_cgi_script(epoll, client_ptr);
 		return;
 	}
 	if (request.method == POST)
@@ -495,7 +458,18 @@ void	ClientConnection::makeResponse(Epoll& epoll)
 		{
 			response.status_code = OK;
 			response.status_message = "OK";
-			response.setBody(makeIndexof(filepath, request.uri), "text/html");
+			try
+			{
+				response.setBody(makeIndexof(filepath, request.uri),
+				"text/html");
+			}
+			catch (const std::exception&)
+			{
+				sendErrorResponse(INTERNAL_SERVER_ERROR,
+					"Error generating directory index",
+					server->getErrorPage(INTERNAL_SERVER_ERROR));
+				return;
+			}
 			res_buffer = response.makeString();
 		}
 		else
@@ -559,7 +533,7 @@ std::string ClientConnection::getFileExtension(const std::string& filepath)
 	return filepath.substr(pos + 1);
 }
 
-void	ClientConnection::run_cgi_script(Epoll& epoll)
+void	ClientConnection::run_cgi_script(Epoll& epoll, const SharedPointer<ClientConnection>& client_ptr)
 {
 	std::pair<std::string, std::string>	cgi_params[] = {
 		std::make_pair("REQUEST_METHOD", request.method),
@@ -576,9 +550,8 @@ void	ClientConnection::run_cgi_script(Epoll& epoll)
 		std::make_pair("PATH_INFO", request.getPathInfo())
 	};
 
-	CGI* cgi = new CGI(this, cgi_params, sizeof(cgi_params) / sizeof(cgi_params[0]));
+	SharedPointer<CGI> cgi(new CGI(client_ptr, cgi_params, sizeof(cgi_params) / sizeof(cgi_params[0])));
 
-	cgi->convert_env_map_to_envp(); // function to copy all the env_map variables into a environment so that i can run execve //
 	epoll.addPipeFds(cgi);
 	cgi->setPid(fork()); // forking to let the child inherit all the env_variables // 
 	switch (cgi->getPid()) {

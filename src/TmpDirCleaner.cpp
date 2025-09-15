@@ -6,25 +6,23 @@
 #include <dirent.h>
 #include <cerrno>
 #include <stdexcept>
+#include "../include/Directory.hpp"
 
 TmpDirCleaner::TmpDirCleaner(const std::string &directory): dir(directory)
 {
 	if (mkdir(directory.c_str(), 0755) == -1 && errno != EEXIST)
 	{
-		throw std::runtime_error("Failed to create temporary directory: " + std::string(strerror(errno)));
+		throw std::runtime_error("Failed to create temporary directory: "
+			+ std::string(strerror(errno)));
 	}
 }
 
 TmpDirCleaner::~TmpDirCleaner()
 {
-	DIR *dirp = opendir(dir.c_str());
-	if (dirp == NULL)
-	{
-		// Directory might not exist; nothing to do
-		return;
-	}
+	Directory dirp(dir.c_str());
+
 	struct dirent *ent = NULL;
-	while ((ent = readdir(dirp)) != NULL)
+	while ((ent = dirp.read()) != NULL)
 	{
 		// skip . and ..
 		const std::string name(static_cast<const char*>(ent->d_name));
@@ -49,5 +47,4 @@ TmpDirCleaner::~TmpDirCleaner()
 			}
 		}
 	}
-	closedir(dirp);
 }

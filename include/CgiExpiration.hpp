@@ -3,14 +3,16 @@
 #include <ctime>
 #include "CGI.hpp"
 #include "BaseExpiration.hpp"
+#include "SharedPointer.hpp"
 
 class CGIExpiration : public BaseExpiration
 {
 private:
-	CGI* 	cgi;
+	SharedPointer<CGI> cgi;
 public:
-	CGIExpiration(CGI* cgi, time_t exp);
-	CGI*	getCgi() const;
+	CGIExpiration(const SharedPointer<CGI>& cgi, time_t exp);
+	const SharedPointer<CGI>& getCgi() const;
+	int		getServerReadFd() const;
 };
 
 #endif

@@ -11,11 +11,12 @@
 #include "Location.hpp"
 #include "Network.hpp"
 #include "../include/User.hpp"
+#include "SharedPointer.hpp"
 
 class Server
 {
 private:
-	std::vector<Network*>				networks;
+	std::vector<SharedPointer<Network> >				networks;
 	uint64_t							client_max_body_size;
 	std::map<std::string, std::string>	error_pages;
 	std::map<std::string, Location>		locations;
@@ -23,23 +24,21 @@ private:
 	std::vector<std::string>			session_ids;
 	
 public:
-	Server();
-	Server(const Server& other);
-	Server&	operator=(const Server& other);
-	~Server();
 	void	parse_listen(std::istringstream &ss);
 	void	parse_client_max_body_size(std::istringstream &ss);
 	void	parse_error_pages(std::ifstream& infile, std::istringstream& ss);
 	bool	parse_single_error_page(const std::string& line);
 	void	parse_route(std::ifstream& infile, std::istringstream& ss);
-	void	addNetwork(Network* net);
+	void	addNetwork(const SharedPointer<Network>& net);
 	void	setClientMaxBodySize(uint64_t _client_max_body_size);
 	void	addErrorPage(const std::string& error, const std::string& page);
 	void	addLocation(const std::string& path, const Location& location);
-	std::map<std::string, Location>::const_iterator getLocationIteratorMatch(std::string const &uri, const std::string& extension, HttpRequest& request) const;
+	std::map<std::string, Location>::const_iterator
+	getLocationIteratorMatch(std::string const &uri, const std::string& extension,
+		HttpRequest& request) const;
 	const std::map<std::string, Location> &getLocations() const;
 	void	setup();
-	const std::vector<Network*>&	getNetworks() const;
+	const std::vector<SharedPointer<Network> >&	getNetworks() const;
 	std::string getErrorPage(int code) const;
 	uint64_t getClientMaxBodySize() const;
 	bool	addUser(const std::string& username, const std::string& password);

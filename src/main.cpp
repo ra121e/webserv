@@ -6,7 +6,7 @@
 /*   By: cgoh <cgoh@student.42singapore.sg>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/09 13:04:22 by athonda           #+#    #+#             */
-/*   Updated: 2025/09/09 19:00:18 by cgoh             ###   ########.fr       */
+/*   Updated: 2025/09/15 17:27:12 by cgoh             ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,9 +58,11 @@ int	main(int argc, char **argv)
 
 		Epoll	epoll(epoll_create1(EPOLL_CLOEXEC));
 		
-		for (std::vector<Server*>::const_iterator s_it = conf.getServers().begin(); s_it != conf.getServers().end(); ++s_it)
+		for (std::vector<SharedPointer<Server> >::const_iterator s_it = conf.getServers().begin();
+		s_it != conf.getServers().end(); ++s_it)
 		{
-			for (std::vector<Network*>::const_iterator n_it = (*s_it)->getNetworks().begin(); n_it != (*s_it)->getNetworks().end(); ++n_it)
+			for (std::vector<SharedPointer<Network> >::const_iterator n_it = (*s_it)->getNetworks().begin();
+			n_it != (*s_it)->getNetworks().end(); ++n_it)
 			{
 				epoll.addServer((*n_it)->getFd(), *s_it);
 			}
