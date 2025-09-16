@@ -57,7 +57,7 @@ document.getElementById("uploadForm").addEventListener("submit", async function 
     const formData = new FormData(this);
 
     try {
-        const res = await fetch("/infinite_loop.py", { method: "POST", body: formData });
+        const res = await fetch("/upload.py", { method: "POST", body: formData });
         document.getElementById("status").textContent =
             res.ok ? "✅ File uploaded successfully" : `❌ Upload failed: ${res.status}`;
     } catch (err) {
